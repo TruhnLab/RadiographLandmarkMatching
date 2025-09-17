@@ -1,0 +1,29 @@
+# Ignore unnecessary files to make the build faster
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.so
+.pytest_cache/
+.coverage
+*.egg-info/
+.git/
+.gitignore
+README.md
+*.md
+.vscode/
+.DS_Store
+Thumbs.db
+
+# Ignore large data directories (you'll mount these as volumes)
+data/
+output/
+*.jpg
+*.png
+*.jpeg
+*.csv
+*.json
+
+# Keep only the model weights directory structure
+!ThirdParty/model_weights/
