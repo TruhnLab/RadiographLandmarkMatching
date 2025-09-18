@@ -119,6 +119,9 @@ body {
   overflow: hidden;
   padding: 20px;
   font-size: 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
 }
 
 .results-carousel video {
