@@ -21,7 +21,7 @@
   </p>
   <h2 align="center"><p>
     <a href="tba" align="center">Paper</a> | 
-    <a href="tba" align="center">Project Page</a>
+    <a href="https://truhnlab.github.io/RadiographLandmarkMatching/" align="center">Project Page</a>
   </p></h2>
   <div align="center"></div>
 </p>
