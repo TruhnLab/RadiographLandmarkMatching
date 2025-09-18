@@ -1,0 +1,450 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="utf-8">
+  <!-- Meta tags for social media banners, these should be filled in appropriatly as they are your "business card" -->
+  <!-- Replace the content tag with appropriate information -->
+  <meta name="description" content="DESCRIPTION META TAG">
+  <meta property="og:title" content="SOCIAL MEDIA TITLE TAG" />
+  <meta property="og:description" content="SOCIAL MEDIA DESCRIPTION TAG TAG" />
+  <meta property="og:url" content="URL OF THE WEBSITE" />
+  <!-- Path to banner image, should be in the path listed below. Optimal dimenssions are 1200X630-->
+  <meta property="og:image" content="static/image/your_banner_image.png" />
+  <meta property="og:image:width" content="1200" />
+  <meta property="og:image:height" content="630" />
+
+
+  <meta name="twitter:title" content="TWITTER BANNER TITLE META TAG">
+  <meta name="twitter:description" content="TWITTER BANNER DESCRIPTION META TAG">
+  <!-- Path to banner image, should be in the path listed below. Optimal dimenssions are 1200X600-->
+  <meta name="twitter:image" content="static/images/your_twitter_banner_image.png">
+  <meta name="twitter:card" content="summary_large_image">
+  <!-- Keywords for your paper to be indexed by-->
+  <meta name="keywords" content="KEYWORDS SHOULD BE PLACED HERE">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+
+  <title>Medical Landmark Matching</title>
+  <link rel="icon" type="image/x-icon" href="static/images/favicon.ico">
+  <link href="https://fonts.googleapis.com/css?family=Google+Sans|Noto+Sans|Castoro" rel="stylesheet">
+
+  <link rel="stylesheet" href="static/css/bulma.min.css">
+  <link rel="stylesheet" href="static/css/bulma-carousel.min.css">
+  <link rel="stylesheet" href="static/css/bulma-slider.min.css">
+  <link rel="stylesheet" href="static/css/fontawesome.all.min.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/jpswalsh/academicons@1/css/academicons.min.css">
+  <link rel="stylesheet" href="static/css/index.css">
+
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+  <script src="https://documentcloud.adobe.com/view-sdk/main.js"></script>
+  <script defer src="static/js/fontawesome.all.min.js"></script>
+  <script src="static/js/bulma-carousel.min.js"></script>
+  <script src="static/js/bulma-slider.min.js"></script>
+  <script src="static/js/index.js"></script>
+</head>
+
+<body>
+
+
+  <section class="hero">
+    <div class="hero-body" style="padding: 1.5rem;">
+      <div class="container is-max-desktop">
+        <div class="columns is-centered">
+          <div class="column has-text-centered">
+            <h1 class="title is-2 publication-title">An Artificial Intelligence Framework for Universal Landmark
+              Matching and Morphometry in Musculoskeletal Radiography</h1>
+            <div class="is-size-5 publication-authors">
+              <!-- Paper authors -->
+              <span class="author-block">
+                Dennis Eschweiler<sup>1*</sup>,</span>
+              <span class="author-block">
+                Eneko Cornejo Merodio<sup>1</sup>,</span>
+              <span class="author-block">
+                Felix Barajas Ordonez<sup>1</sup>,</span>
+              <span class="author-block">
+                Aleksandar Lichev<sup>1</sup>,</span>
+              <span class="author-block">
+                Nikol Ignatova<sup>1</sup>,</span>
+              <span class="author-block">
+                Marc Sebastian von der Stück<sup>1</sup>,</span>
+              <span class="author-block">
+                Christiane Kuhl<sup>1</sup>,</span>
+              <span class="author-block">
+                Daniel Truhn<sup>1</sup>,</span>
+              <span class="author-block">
+                Sven Nebelung<sup>1*</sup></span>
+            </div>
+
+            <div class="is-size-6 publication-authors"><br>
+              <span class="author-block"><sup>1</sup>Department of Diagnostic and Interventional Radiology, University
+                Hospital RWTH Aachen, Aachen, Germany</span>
+              <span class="eql-cntrb"><br><sup>*</sup>{deschweiler,snebelung}@ukaachen.de</span>
+            </div><br>
+
+            <div class="column has-text-centered">
+              <div class="publication-links">
+                <!-- Arxiv PDF link -->
+                <span class="link-block">
+                  <a href="tba" target="_blank" class="external-link button is-normal is-rounded is-dark">
+                    <span class="icon">
+                      <i class="fas fa-file-pdf"></i>
+                    </span>
+                    <span>Paper</span>
+                  </a>
+                </span>
+
+                <!-- Github link -->
+                <span class="link-block">
+                  <a href="https://github.com/DEschweiler/roma_medical" target="_blank"
+                    class="external-link button is-normal is-rounded is-dark">
+                    <span class="icon">
+                      <i class="fab fa-github"></i>
+                    </span>
+                    <span>Code</span>
+                  </a>
+                </span>
+
+                <!-- Team link -->
+                <span class="link-block">
+                  <a href="https://aimedicine.rwth-aachen.de/" target="_blank"
+                    class="external-link button is-normal is-rounded is-dark">
+                    <span class="icon">
+                      <i class="fas fa-users"></i>
+                    </span>
+                    <span>Team</span>
+                  </a>
+                </span>
+
+                <!-- Team link -->
+                <span class="link-block">
+                  <a href="https://www.ukaachen.de/kliniken-institute/klinik-fuer-diagnostische-und-interventionelle-radiologie/forschung/labor-fuer-kuenstliche-intelligenz-in-der-medizin/"
+                    target="_blank" class="external-link button is-normal is-rounded is-dark">
+                    <span class="icon">
+                      <i class="fa fa-building"></i>
+                    </span>
+                    <span>Department</span>
+                  </a>
+                </span>
+                
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+
+  <!-- Paper abstract -->
+  <section class="section hero is-light">
+    <div class="container is-max-desktop">
+      <div class="columns is-centered has-text-centered">
+        <div class="column is-four-fifths">
+          <h2 class="title is-3">Abstract</h2>
+          <div class="content has-text-justified">
+            <p>
+              This study presents a zero-shot artificial intelligence (AI)-based approach for automated landmark
+              matching in radiographs, designed to improve scalability and reliability in deriving musculoskeletal (MSK)
+              measurements across various anatomic regions and conditions.
+              Key anatomic landmarks were manually identified under expert supervision, building the basis to
+              automatically derive pertinent angle and distance measurements.
+              Using one patient's radiograph as a reference, a robust AI-based feature matching approach establishes
+              dense matches between the reference and unseen target images.
+              Reference landmarks are transferred along the dense matching, resulting in precise landmark placement and
+              automated calculation of MSK measurements within an entire patient cohort.
+              The results demonstrate versatile and robust application without requiring anatomy-specific training,
+              while remaining stable with in the presence of orthopedic implants.
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+  <!-- End paper abstract -->
+
+  <!-- Teaser image -->
+  <!-- <section class="hero is-small">
+  <div class="hero-body">
+    <div class="container">
+      <div class="columns is-centered">
+       <div class="item">
+          <br>
+          <img src="static/images/banner.svg"/>
+      </div>      
+    </div>
+  </div>
+</div>
+</div>
+</section> -->
+  <!-- End teaser image -->
+
+
+  <!-- Method section -->
+  <section class="hero is-small">
+    <div class="hero-body">
+      <div class="container">
+        <!-- <h2 class="title is-3">Method</h2> -->
+        <div style="position: relative;">
+          <h2 class="title is-3">From Head to Toe: A Single AI Framework for Universal Application</h2>
+          <img src="static/images/skelet.svg"
+            style="float: left; margin: 0px 0px 0px 0px; max-width: 320px; width: 50%; height: auto; border-radius: 0px;" />
+
+          <div style="text-align: justify;">
+            Artificial intelligence (AI) has shown great potential in assisting radiologists with musculoskeletal (MSK)
+            assessments across various anatomical regions<sup><a href="https://pubmed.ncbi.nlm.nih.gov/36766600/"
+                target="_blank">1</a>,<a href="https://pubmed.ncbi.nlm.nih.gov/37964028/" target="_blank">2</a>,<a
+                href="https://pubmed.ncbi.nlm.nih.gov/34773485/" target="_blank">3</a>,<a
+                href="https://pubmed.ncbi.nlm.nih.gov/37566272/" target="_blank">4</a></sup>.
+            However, most existing tools are narrowly tailored for specific anatomies or rely on segmentation-based
+            methods as a basis.
+            To address these limitations, we propose a versatile and generalist AI-based approach for landmarks
+            matching.
+            In contrast to typical generalist landmark matching approaches that depend on automatically identified,
+            optimally descriptive landmarks<sup><a href="https://arxiv.org/abs/1911.11763" target="_blank">5</a>,<a
+                href="https://arxiv.org/abs/2306.13643" target="_blank">6</a>,<a href="https://arxiv.org/abs/2104.00680"
+                target="_blank">7</a></sup>, our use-case has to be based on manually selected landmarks tailored for
+            MSK measurements.
+            As these landmarks are potentially subotimal for precise matching, we employ an AI-based method<sup><a
+                href="https://parskatt.github.io/RoMa/" target="_blank">8</a></sup> that first performs multi-scale
+            dense image matching between the reference and target images independently of the landmarks.
+            The AI uses a combination of transformer and convolutional neural networks to establish a multi-resolution
+            descriptive feature representation of each position within the images, allowing to define correspondences
+            between the reference and target images.
+            In a subsequent step, landmark positions are transferred to the target image based on these correspondences,
+            with the determination of final locations benefiting from the redundancy of the dense matching.
+            This enables robust automation of landmark matching from a reference patient across an entire cohort of
+            target patients.
+            The approach is anatomy-agnostic, enabling the use of the same backbone model for a wide range of anatomical
+            regions and MSK measurements.
+            For more detailed information we refer to our paper.
+          </div>
+
+          <div style="clear: both;"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+  <!-- End method section -->
+
+
+
+  <!-- Image carousel -->
+  <section class="hero is-small">
+    <div class="hero-body">
+      <div class="container">
+        <h2 class="title is-3">Behind the Curtain: Visualizing the Inner Workings</h2>
+        The process of establishing a dense match between two images relies on abstract feature representations for each
+        position in both the reference and target images.
+        To better understand which information is encoded by the AI, we examined the feature similarities between a
+        specific position within the reference image and the entire target image.
+        Our findings show that the AI captures both semantic and texture features. The matching process utilizes this
+        encoded information, along with precise positional data, to create a reliable mapping between the
+        images.<br><br>
+        <span style="color:gray; font-size:small;">Hover your mouse over the image to stop automatic transitions.</span>
+        <div id="results-carousel" class="carousel results-carousel">
+          <div class="item">
+            <img src="static/images/heatmap_feetap_1.png" />
+          </div>
+          <div class="item">
+            <img src="static/images/heatmap_patella_1.png" />
+          </div>
+          <div class="item">
+            <img src="static/images/heatmap_shoulder_1.png" />
+          </div>
+          <div class="item">
+            <img src="static/images/heatmap_feetlat_1.png" />
+          </div>
+          <div class="item">
+            <img src="static/images/heatmap_knee_2.png" />
+          </div>
+          <div class="item">
+            <img src="static/images/heatmap_shoulder_2.png" />
+          </div>
+          <div class="item">
+            <img src="static/images/heatmap_patella_2.png" />
+          </div>
+          <div class="item">
+            <img src="static/images/heatmap_feetap_2.png" />
+          </div>
+          <div class="item">
+            <img src="static/images/heatmap_feetlat_2.png" />
+          </div>
+          <div class="item">
+            <img src="static/images/heatmap_knee_3.png" />
+          </div>
+          <div class="item">
+            <img src="static/images/heatmap_patella_3.png" />
+          </div>
+          <div class="item">
+            <img src="static/images/heatmap_feetap_3.png" />
+          </div>
+          <div class="item">
+            <img src="static/images/heatmap_shoulder_3.png" />
+          </div>
+          <div class="item">
+            <img src="static/images/heatmap_feetlat_3.png" />
+          </div>
+          <div class="item">
+            <img src="static/images/heatmap_knee_1.png" />
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+  <!-- End image carousel -->
+
+
+  <!-- Video carousel -->
+  <section class="hero is-small">
+    <div class="hero-body">
+      <div class="container">
+        <h2 class="title is-3">Interactivity: Real-Time AI-Assisted Landmark Matching</h2>
+        Once a correspondence between the reference and target radiographs is established, landmark matching can be
+        performed in real-time.
+        This process enables the alignment of individual points and allows for the definition of a predefined set of
+        landmarks that can be mapped onto the target patient.
+        These predefined landmarks can be customized for the automated calculation of specific measurements, which, once
+        defined on a reference patient, can be consistently and automatically transferred to any radiograph within the
+        target cohort.<br><br>
+        <span style="color:gray; font-size:small;">Hover your mouse over the video to stop automatic transitions.</span>
+        <div id="results-carousel" class="carousel results-carousel">
+          <div class="item item-video2">
+            <video poster="" id="video2" autoplay controls muted loop height="100%" width="100%">
+              <!-- Your video file here -->
+              <source src="static/videos/feet_ap.mp4" type="video/mp4">
+            </video>
+          </div>
+          <div class="item item-video4">
+            <video poster="" id="video4" autoplay controls muted loop height="100%" width="100%">\
+              <!-- Your video file here -->
+              <source src="static/videos/feet_lateral.mp4" type="video/mp4">
+            </video>
+          </div>
+          <div class="item item-video5">
+            <video poster="" id="video5" autoplay controls muted loop height="100%" width="100%">\
+              <!-- Your video file here -->
+              <source src="static/videos/leg.mp4" type="video/mp4">
+            </video>
+          </div>
+          <div class="item item-video6">
+            <video poster="" id="video6" autoplay controls muted loop height="100%" width="100%">\
+              <!-- Your video file here -->
+              <source src="static/videos/knee.mp4" type="video/mp4">
+            </video>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+  <!-- End video carousel -->
+
+
+
+  <!-- Image carousel -->
+  <!-- <section class="hero is-small">
+  <div class="hero-body">
+    <div class="container">
+      <h2 class="title is-3">Beyond the Norm: Assessing Stability Under Extreme Conditions</h2>
+      The AI-based landmark matching framework demonstrates reliable performance across various anatomic regions and views. 
+      However, maintaining stability with extreme morphotypes, rare conditions, and the presence of orthopedic implants is a critical factor for clinical usability.
+      To investigate this, we conducted qualitative tests on diverse samples, including those from non-standardized image acquisitions and scenarios that extend beyond typical clinical use cases for deriving common distance and angle measurements.
+      The following results illustrate matching from a reference radiograph to those extreme cases.
+      These showcase the stability and robustness of the matching framework, but at the same time, these examples reveal its limitations in achieving precise landmark matching for certain extreme conditions.<br><br>
+      <span style="color:gray; font-size:small;">Hover your mouse over the image to stop automatic transitions.</span>
+      <div id="results-carousel" class="carousel results-carousel">
+      <div class="item">
+        <img src="static/images/special_feet_1.png" width="100%"/>
+      </div>
+      <div class="item">
+        <img src="static/images/special_shoulder_1.png" width="100%"/>
+      </div>
+      <div class="item">
+        <img src="static/images/special_shoulder_2.png" width="100%"/>
+      </div>
+      <div class="item">
+        <img src="static/images/special_feet_2.png" width="100%"/>
+      </div>
+      <div class="item">
+        <img src="static/images/special_shoulder_3.png" width="100%"/>
+      </div>
+      <div class="item">
+        <img src="static/images/special_feet_3.png" width="100%"/>
+      </div>
+  </div>
+</div>
+</div>
+</section> -->
+  <!-- End image carousel -->
+
+  <!-- Teaser image -->
+  <section class="hero is-small">
+    <div class="hero-body">
+      <div class="container">
+        <h2 class="title is-3">From Novice to Expert: Annotation Through Imitation</h2>
+        Our findings indicate that the selection of the reference radiograph significantly influences the outcome, as
+        each radiograph is unique and often presents highly superimposed structures.
+        This can introduce ambiguity regarding the precise position and the intended anatomical structure to be marked
+        by the landmark.
+        To enhance the reliability of the matching process, multiple reference radiographs can be used to establish a
+        more robust alignment based on overall agreement.
+        Increasing the number of reference radiographs systematically improves the framework’s ability to account for
+        variations between radiographs, leading to a steady improvement in matching accuracy as demonstrated by the
+        results below.<br><br>
+        <div class="columns is-centered">
+          <div class="item">
+            <br>
+            <img src="static/images/multiple_references.svg" />
+          </div>
+        </div>
+      </div>
+    </div>
+    </div>
+  </section>
+  <!-- End teaser image -->
+
+
+  <!--BibTex citation -->
+  <section class="section" id="BibTeX">
+    <div class="container is-max-desktop content">
+      <h2 class="title">BibTeX</h2>
+      <pre><code>
+@article{eschweiler2025RadiographMatching,
+  title={An Artificial Intelligence Framework for Universal Landmark Matching and Morphometry in Musculoskeletal Radiography},
+  author={Dennis Eschweiler and Eneko Cornejo Merodio and Felix Mauricio Barajas Ordonez and Aleksandar Lichev and Nikol Ignatova and Marc Sebastian von der St\"{u}ck and Christiane Kuhl and Daniel Truhn and Sven Nebelung},
+  year={2025}
+}
+    </code></pre>
+    </div>
+  </section>
+  <!--End BibTex citation -->
+
+
+  <footer class="footer">
+    <div class="container">
+      <div class="columns is-centered">
+        <div class="column is-8">
+          <div class="content">
+            <p>
+              This page was built using the <a href="https://github.com/eliahuhorwitz/Academic-project-page-template"
+                target="_blank">Academic Project Page Template</a> which was adopted from the <a
+                href="https://nerfies.github.io" target="_blank">Nerfies</a> project page.<br>
+              Flaticon created by <a
+                href="https://www.flaticon.com/free-icon/x-ray_1757690?term=xray&related_id=1757690"
+                target="_blank">pmicon</a>.
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </footer>
+
+  <!-- Statcounter tracking code -->
+
+  <!-- You can add a tracker to track page visits by creating an account at statcounter.com -->
+
+  <!-- End of Statcounter Code -->
+
+</body>
+
+</html>
