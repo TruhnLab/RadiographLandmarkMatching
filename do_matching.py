@@ -115,7 +115,6 @@ def main(hparams):
             elif error_left < error_right:
                 print('Detected wrong laterality. Flipping image horizontally to align with references.')
                 img_target = np.flip(img_target, axis=1)
-                io.imsave(target_img_path, img_target)
             else:
                 print('Laterality and anatomy check passed.')
 
