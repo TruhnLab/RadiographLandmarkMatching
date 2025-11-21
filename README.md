@@ -20,7 +20,7 @@
     Sven Nebelung
   </p>
   <h2 align="center"><p>
-    <a href="tba" align="center">Paper</a> | 
+    <!-- <a href="tba" align="center">Paper</a> |  -->
     <a href="https://truhnlab.github.io/RadiographLandmarkMatching/" align="center">Project Page</a>
   </p></h2>
   <div align="center"></div>
@@ -35,9 +35,9 @@
 
 If you find this project useful for your work, please consider citing it:
 ```
-@article{eschweiler2025zeroshotmsklandmark,
- title={Zero-Shot Artificial Intelligence-based Landmark Matching for Versatile and Anatomy-Agnostic Radiograph Analysis},
- author={Dennis Eschweiler and Eneko Cornejo Merodio and Marc Sebastian Huppertz and Aleksandar Lichev and Nikol Ignatova and Daniel Truhn and Christiane Kuhl and Sven Nebelung},
+@article{eschweiler2025radiographmorphometry,
+ title={An Artificial Intelligence Framework for Universal Landmark Matching and Morphometry in Musculoskeletal Radiographys},
+ author={Dennis Eschweiler and Eneko Cornejo Merodio and Felix Barajas Ordonez and Marc Sebastian von der St\"uck and Aleksandar Lichev and Nikol Ignatova and Christiane Kuhl and Daniel Truhn and Sven Nebelung},
  year={2025}
 }
 ```
