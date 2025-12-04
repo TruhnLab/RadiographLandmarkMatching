@@ -123,15 +123,15 @@ The `experiment_config_windows.json` file contains measurement configurations:
 ```bash
 # 1. Match landmarks
 python do_matching.py \
-  --reference_path "E:/data/UKAKneeX/LATERAL_ALL/*" \
-  --data_path "C:/path/to/target/images" \
-  --save_path "C:/path/to/results" \
+  --reference_path "/path/to/reference/images" \
+  --data_path "/path/to/target/images" \
+  --save_path "/path/for/saving/matching" \
   --config_tag "knee_lateral"
 
 # 2. Calculate measurements
 python do_measurements.py \
-  --data_path "C:/path/to/results" \
-  --save_path "C:/path/to/results" \
+  --data_path "/path/to/matchings" \
+  --save_path "/path/for/saving/measurements" \
   --config_tag "knee_lateral"
 ```
 
