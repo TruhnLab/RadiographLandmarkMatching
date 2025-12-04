@@ -26,6 +26,7 @@ metadata*
 outlier_detection*
 overlay_prediction*
 eval_*
-landmark_trafo_and_visualization*
+landmark_trafo_and_visual*
 user_interface*
 benchmark*
+*ignore*
