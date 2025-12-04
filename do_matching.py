@@ -109,7 +109,7 @@ def main(hparams):
             print(f"Left Procrustes Error: {error_left:.4f}")
             print(f"Right Procrustes Error: {error_right:.4f}")
 
-            if error_left > hparams.max_matching_error and error_right > hparams.max_matching_error: # TODO: optimize this threshold
+            if error_left > hparams.max_matching_error and error_right > hparams.max_matching_error:
                 print(f"All checks failed for {id_target}. Skipping...")
                 continue
             elif error_left < error_right:
@@ -220,7 +220,7 @@ if __name__ == '__main__':
 
     parent_parser = ArgumentParser(
         description='Roma Medical - AI-powered knee X-ray landmark matching and analysis',
-        epilog='Example: python do_matching.py --data_path /path/to/images --reference_path /path/to/references',
+        epilog='Example: python do_matching.py --data_path /path/to/targets --reference_path /path/to/references',
         formatter_class=RawDescriptionHelpFormatter,
         add_help=True
     )
@@ -228,35 +228,35 @@ if __name__ == '__main__':
     parent_parser.add_argument(
         '--reference_path',
         type=str,
-        default=r'E:\data\UKAKneeX\LATERAL_ALL\*',
+        default=r'path_to_reference_images',
         help='Path to reference images and landmark files'
     )
 
     parent_parser.add_argument(
         '--data_path',
         type=str,
-        default=r'E:\data\UKAKneeX\LATERAL_PACS\*',
+        default=r'path_to_target_images',
         help='Path to target images to be processed'
     )
 
     parent_parser.add_argument(
         '--save_path',
         type=str,
-        default=r'E:\experiments\MSK_Landmarks_2D\docker_test',
+        default=r'path_to_save_directory',
         help='Path where results will be saved'
     )
 
     parent_parser.add_argument(
         '--reference_left_file',
         type=str,
-        default=r'E:\data\UKAKneeX\LATERAL_LEFT\1010500000718410_9190787601\1010500000718410_9190787601_LATERAL_LEFT',
+        default=r'path_to_left_reference',
         help='Reference file for left laterality check (optional)'
     )
     
     parent_parser.add_argument(
         '--reference_right_file',
         type=str,
-        default=r'E:\data\UKAKneeX\LATERAL_RIGHT\1010500001799818_9190675901\1010500001799818_9190675901_LATERAL_RIGHT',
+        default=r'path_to_right_reference',
         help='Reference file for right laterality check (optional)'
     )
     

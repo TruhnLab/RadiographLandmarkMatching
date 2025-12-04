@@ -80,19 +80,19 @@ if __name__ == '__main__':
     parent_parser.add_argument(
         '--data_path',
         type=str,
-        default=r'E:\experiments\MSK_Landmarks_2D\ROMA_Knee_PatellaMeasures_2010-2024'
+        default=r'path_to_matchings'
     )
 
     parent_parser.add_argument(
         '--save_path',
         type=str,
-        default=r'E:\experiments\MSK_Landmarks_2D\ROMA_Knee_PatellaMeasures_2010-2024\measurements'
+        default=r'path_to_save_measurements'
     )
 
     parent_parser.add_argument(
         '--config_path',
         type=str,
-        default=r'C:\Users\deschweiler\Documents\KneeMRI_PatellofemoralMeasurements\roma_medical\experiment_config_windows.json'
+        default=r'path_to_config_file'
     )
 
     parent_parser.add_argument(
