@@ -1,0 +1,15 @@
+{
+  "knee_lateral": {
+    "mode": "knee_lateral",
+    "mpp": 0.15,
+    "experiment_root": "/root/path/to/matchings",
+    "experiment_folders": ["matching_experiment_name"],
+    "annotation_paths": ["/path/to/annotations/"],
+    "image_paths": ["/path/to/images/"],
+    "landmark_scaling": [1, 1],
+    "representative_image_file": "representative_image_for_plotting.png",
+    "representative_landmark_file": "representative_landmark_for_plotting.csv",
+    "reference_ids": ["best_reference_image_id"]
+  }
+}
+  
