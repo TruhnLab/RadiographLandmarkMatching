@@ -19,6 +19,45 @@ from utils.vis2D import plot_images, plot_matches, save_plot
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 
+def agreement_analysis(pred_folder, img_target, id_target, save_path, format='svg'):
+
+    # Get all prediction files
+    prd_kpt_files_stacked = glob.glob(os.path.join(pred_folder, f'{id_target}_matches', '*_matches.csv'))
+    print(f'{len(prd_kpt_files_stacked)} prediction files found for {id_target}.')
+
+    # Load and stack all predicted keypoints
+    prd_kpts_stacked = None
+    for prd_kpt_file in prd_kpt_files_stacked:
+
+        prd_kpts = read_csv(prd_kpt_file)
+        prd_kpts = np.array([[float(x),float(y)] for x,y in prd_kpts])
+
+        if prd_kpts_stacked is None:
+            prd_kpts_stacked = prd_kpts[None,...]
+        else:
+            prd_kpts_stacked = np.concatenate([prd_kpts_stacked, prd_kpts[None,...]], axis=0)
+
+    # Calculate mean position
+    prd_kpts_mean = np.zeros((prd_kpts_stacked.shape[1], 2))
+    for i in range(prd_kpts_stacked.shape[1]):
+        prd_kpts_mean[i] = geometric_median(prd_kpts_stacked[:, i, :])
+        
+    # Reshape keypoint list as bulk (for visualization)
+    prd_kpts_bulk = np.reshape(prd_kpts_stacked, (-1,2))
+
+    # Visualize and save
+    figsize = (img_target.shape[0] / 100, img_target.shape[1] / 100)  # Convert pixels to inches at 100 DPI
+    fig, ax = plt.subplots(1, 1, figsize=figsize)
+    plt.imshow(img_target, cmap='gray')
+    ax.scatter(prd_kpts_bulk[:, 0], prd_kpts_bulk[:, 1], c='green', s=10, alpha=0.1)
+    ax.scatter(prd_kpts_mean[:, 0], prd_kpts_mean[:, 1], c='red', s=40)
+    plt.axis('off')
+    plt.tight_layout()
+    plt.savefig(save_path+f'.{format}', format=format, bbox_inches="tight", pad_inches=0)
+
+    return prd_kpts_mean
+
+
 
 def main(hparams):
 
@@ -43,8 +82,28 @@ def main(hparams):
     ref_img_files = sorted(glob.glob(os.path.join(hparams.reference_path, f'*_image.{hparams.image_filetype}')))
     ref_kpt_files = sorted(glob.glob(os.path.join(hparams.reference_path, '*_landmarks.csv')))
     assert len(ref_img_files) == len(ref_kpt_files), f"Mismatch between number of reference images and keypoint files. {len(ref_img_files)} images and {len(ref_kpt_files)} keypoint files found."
+    
+    # Sort references based on ranking scores if provided
+    if not hparams.reference_rank_file is None:
+        print('Sorting reference files based on ranking...')
+        # Load the ranking file
+        with open(hparams.reference_rank_file, 'r') as f:
+            rank_dict = json.load(f)
+
+        # Sort reference IDs by their score (ascending)
+        sorted_ids = sorted(rank_dict, key=rank_dict.get)
+
+        # Build a mapping from reference ID to file for quick lookup
+        img_map = {os.path.split(f)[-1].replace(f'_image.{hparams.image_filetype}', ''): f for f in ref_img_files}
+        kpt_map = {os.path.split(f)[-1].replace('_landmarks.csv', ''): f for f in ref_kpt_files}
+
+        # Only keep files present in the ranking file, in sorted order
+        ref_img_files = [img_map[ref_id] for ref_id in sorted_ids if ref_id in img_map]
+        ref_kpt_files = [kpt_map[ref_id] for ref_id in sorted_ids if ref_id in kpt_map]
+    
     count_ref_files = len(ref_img_files)
-    print(f'Found {count_ref_files} reference files')
+    count_ref_used = count_ref_files if hparams.num_references <=0 else min(hparams.num_references, count_ref_files)
+    print(f'Found {count_ref_files} reference files, using top {count_ref_used} for matching.')
 
 
     # ------------------------
@@ -88,6 +147,8 @@ def main(hparams):
         if len(processed_path)>0:
             print(f'Skipping {id_target} as it has already been processed...')
             continue
+        
+        save_path_tmp = os.path.join(hparams.save_path, f'{id_target}_matches_tmp') if hparams.temp_results else None
 
         # LATERALITY CHECK
         # ------------------------
@@ -109,12 +170,13 @@ def main(hparams):
             print(f"Left Procrustes Error: {error_left:.4f}")
             print(f"Right Procrustes Error: {error_right:.4f}")
 
-            if error_left > hparams.max_matching_error and error_right > hparams.max_matching_error:
+            if error_left > hparams.max_matching_error and error_right > hparams.max_matching_error: # TODO: optimize this threshold
                 print(f"All checks failed for {id_target}. Skipping...")
                 continue
             elif error_left < error_right:
                 print('Detected wrong laterality. Flipping image horizontally to align with references.')
                 img_target = np.flip(img_target, axis=1)
+                io.imsave(target_img_path, img_target)
             else:
                 print('Laterality and anatomy check passed.')
 
@@ -128,8 +190,12 @@ def main(hparams):
         os.makedirs(os.path.join(hparams.save_path, f'{id_target}_matches'), exist_ok=True)
         for num_matching, (ref_img_path, ref_kpt_path) in enumerate(zip(ref_img_files, ref_kpt_files)):
 
+            # Check if maximum number of references reached
+            if hparams.num_references > 0 and num_matching >= hparams.num_references:
+                break
+
             # Extract ID from file names
-            id_img = os.path.split(ref_img_path)[-1].replace('_image.jpg', '')
+            id_img = os.path.split(ref_img_path)[-1].replace(f'_image.{hparams.image_filetype}', '')
             id_kpt = os.path.split(ref_kpt_path)[-1].replace('_landmarks.csv', '')
 
             assert id_img == id_kpt, f"ID mismatch: {id_img} != {id_kpt}"
@@ -143,7 +209,7 @@ def main(hparams):
                 continue
 
             # Matching
-            print(f"{num_matching+1}/{count_ref_files} {id_img} to {id_target}...")
+            print(f"{num_matching+1}/{count_ref_used} {id_img} to {id_target}...")
             img_ref, img_target, keypoints_source, registered_kpts = compute_matches(ref_img_path, ref_kpt_path, target_img_path, roma_model, device, landmark_scaling=hparams.landmark_scaling)
 
             # Calculate confidence
@@ -167,48 +233,25 @@ def main(hparams):
             with open(save_path_metrics, 'w') as f:
                 json.dump(match_data, f, indent=2)
 
+            # Create temporary visual results if specified
+            if hparams.temp_results:
+                # Remove previous temporary results if existing
+                if os.path.exists(save_path_tmp+f'_{num_matching-1}.png'):
+                    os.remove(save_path_tmp+f'_{num_matching-1}.png')
+                _ = agreement_analysis(hparams.save_path, img_target, id_target, save_path_tmp+f'_{num_matching}', format='png')
+
         
         # AGREEMENT CALCULATION
         # ------------------------
+        
+        # Create final results
+        save_path_bulk = os.path.join(hparams.save_path, f'{id_target}_matches_bulk')
+        prd_kpts_mean = agreement_analysis(hparams.save_path, img_target, id_target, save_path_bulk, format='svg')
+        create_csv(prd_kpts_mean, save_path_bulk, test_split=0, val_split=0)
 
-        # Get all prediction files
-        prd_kpt_files_stacked = glob.glob(os.path.join(hparams.save_path, f'{id_target}_matches', '*_matches.csv'))
-        print(f'{len(prd_kpt_files_stacked)} prediction files found for {id_target}.')
-
-        # Load and stack all predicted keypoints
-        prd_kpts_stacked = None
-        for prd_kpt_file in prd_kpt_files_stacked:
-
-            prd_kpts = read_csv(prd_kpt_file)
-            prd_kpts = np.array([[float(x),float(y)] for x,y in prd_kpts])
-
-            if prd_kpts_stacked is None:
-                prd_kpts_stacked = prd_kpts[None,...]
-            else:
-                prd_kpts_stacked = np.concatenate([prd_kpts_stacked, prd_kpts[None,...]], axis=0)
-
-        # Calculate mean position
-        prd_kpts_mean = np.zeros((prd_kpts_stacked.shape[1], 2))
-        for i in range(prd_kpts_stacked.shape[1]):
-            prd_kpts_mean[i] = geometric_median(prd_kpts_stacked[:, i, :])
-            
-        # Reshape keypoint list as bulk (for visualization)
-        prd_kpts_bulk = np.reshape(prd_kpts_stacked, (-1,2))
-
-        # Visualize and save
-        save_path_bulk = os.path.join(hparams.save_path, f'{id_target}_matches_bulk.png')
-        figsize = (img_target.shape[0] / 100, img_target.shape[1] / 100)  # Convert pixels to inches at 100 DPI
-        fig, ax = plt.subplots(1, 1, figsize=figsize)
-        plt.imshow(img_target, cmap='gray')
-        ax.scatter(prd_kpts_bulk[:, 0], prd_kpts_bulk[:, 1], c='green', s=10, alpha=0.05)
-        ax.scatter(prd_kpts_mean[:, 0], prd_kpts_mean[:, 1], c='red', s=40)
-        plt.axis('off')
-        plt.tight_layout()
-        plt.savefig(save_path_bulk, bbox_inches="tight", pad_inches=0)
-
-        create_csv(prd_kpts_mean, save_path_bulk.replace('.png','').replace('.jpg',''), test_split=0, val_split=0)
-
-
+        # Remove temporary results if existing
+        for f in glob.glob(save_path_tmp + '*.png'):
+            os.remove(f)
 
 
 
@@ -230,6 +273,20 @@ if __name__ == '__main__':
         type=str,
         default=r'path_to_reference_images',
         help='Path to reference images and landmark files'
+    )
+
+    parent_parser.add_argument(
+        '--reference_rank_file',
+        type=str,
+        default=r'path_to_reference_images\reference_ranks.json',
+        help='Path to reference ranking file (JSON format)'
+    )
+    
+    parent_parser.add_argument(
+        '--num_references',
+        type=int,
+        default=-1,
+        help='Total number of references used for one matching (set to -1 to use all available references)'
     )
 
     parent_parser.add_argument(
@@ -303,6 +360,12 @@ if __name__ == '__main__':
         default=(1,1),
         nargs='+',
         help='Landmark scaling factors (x_scale y_scale)'
+    )
+
+    parent_parser.add_argument(
+        "--temp_results",
+        action="store_true",
+        help="If set, create temporary results. Default is False."
     )
 
     
