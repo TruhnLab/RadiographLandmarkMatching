@@ -250,8 +250,9 @@ def main(hparams):
         create_csv(prd_kpts_mean, save_path_bulk, test_split=0, val_split=0)
 
         # Remove temporary results if existing
-        for f in glob.glob(save_path_tmp + '*.png'):
-            os.remove(f)
+        if hparams.temp_results:
+            for f in glob.glob(save_path_tmp + '*.png'):
+                os.remove(f)
 
 
 
