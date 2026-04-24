@@ -20,7 +20,7 @@
     Sven Nebelung
   </p>
   <h2 align="center"><p>
-    <a href="https://doi.org/10.1007/s00330-026-12555-y" target="_blank" align="center">Paper</a> | 
+    <a href="https://doi.org/10.1007/s00330-026-12555-y" align="center">Paper</a> | 
     <a href="https://truhnlab.github.io/RadiographLandmarkMatching/" align="center">Project Page</a>
   </p></h2>
   <div align="center"></div>
@@ -37,7 +37,7 @@ If you find this project useful for your work, please consider citing it:
 ```
 @article{eschweiler2026RadiographMatching,
   title={An Artificial Intelligence Framework for Universal Landmark Matching and Morphometry in Musculoskeletal Radiography},
-  author={Dennis Eschweiler and Eneko Cornejo Merodio and Felix Mauricio Barajas Ordonez and Aleksandar Lichev and Nikol Ignatova and Marc Sebastian von der St\"{u}ck and Christiane Kuhl and Daniel Truhn and Sven Nebelung},
+  author={Dennis Eschweiler and Eneko Cornejo Merodio and Felix Barajas Ordonez and Aleksandar Lichev and Nikol Ignatova and Marc Sebastian von der St\"{u}ck and Christiane K. Kuhl and Daniel Truhn and Sven Nebelung},
   journal={Eur Radiol},
   year={2026},
   doi={10.1007/s00330-026-12555-y}
