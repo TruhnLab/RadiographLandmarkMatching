@@ -20,7 +20,7 @@
     Sven Nebelung
   </p>
   <h2 align="center"><p>
-    <a href="https://doi.org/10.1007/s00330-026-12555-y" align="center">Paper</a> | 
+    <a href="https://doi.org/10.1007/s00330-026-12555-y" target="_blank" align="center">Paper</a> | 
     <a href="https://truhnlab.github.io/RadiographLandmarkMatching/" align="center">Project Page</a>
   </p></h2>
   <div align="center"></div>
