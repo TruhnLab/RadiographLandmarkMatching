@@ -37,8 +37,9 @@ If you find this project useful for your work, please consider citing it:
 ```
 @article{eschweiler2026RadiographMatching,
   title={An Artificial Intelligence Framework for Universal Landmark Matching and Morphometry in Musculoskeletal Radiography},
-  author={Dennis Eschweiler and Eneko Cornejo Merodio and Felix Barajas Ordonez and Aleksandar Lichev and Nikol Ignatova and Marc Sebastian von der St\"{u}ck and Christiane K. Kuhl and Daniel Truhn and Sven Nebelung},
-  journal={Eur Radiol},
+  author={Dennis Eschweiler and Eneko Cornejo Merodio and Felix Barajas Ordonez and Aleksandar Lichev and Nikol Ignatova and Marc Sebastian von der St{\"u}ck and Christiane K. Kuhl and Daniel Truhn and Sven Nebelung},
+  journal={European Radiology},
+  pages={1--14},
   year={2026},
   doi={10.1007/s00330-026-12555-y}
 }
