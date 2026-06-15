@@ -2,6 +2,11 @@ body {
   font-family: 'Noto Sans', sans-serif;
 }
 
+/* Ensure all buttons and form controls inherit Noto Sans from the body */
+button, input, select, textarea {
+  font-family: inherit;
+}
+
 
 .footer .icon-link {
     font-size: 25px;
@@ -135,6 +140,101 @@ body {
 .eql-cntrb { 
   font-size: smaller;
 }
+
+/* Downstream Projects Accordion Styles */
+.downstream-accordion {
+  margin-top: 1rem;
+  margin-bottom: 1rem;
+}
+
+.downstream-main-toggle {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  transition: all 0.2s ease;
+}
+
+.downstream-main-toggle:hover h2 {
+  color: #3273dc !important; /* Elegant blue highlight on hover */
+}
+
+.downstream-accordion.is-active .main-toggle-icon {
+  transform: rotate(-180deg);
+}
+
+.downstream-main-content {
+  display: none;
+  border-top: 1px solid #dbdbdb;
+}
+
+/* Nested Accordion Styles */
+.nested-accordion-item {
+  border-bottom: 1px solid #eee;
+}
+
+.nested-accordion-item:last-child {
+  border-bottom: none;
+}
+
+.nested-accordion-header {
+  width: 100%;
+  font-family: inherit; /* inherit Noto Sans from the body instead of using default browser button font */
+  background: none;
+  border: none;
+  padding: 0.75rem 2.5rem; /* extra padding to prevent text overlapping with the chevron */
+  text-align: center;
+  font-size: 1.05rem;
+  font-weight: 500;
+  color: #363636;
+  position: relative;
+  cursor: pointer;
+  outline: none;
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+.nested-accordion-header:hover {
+  background-color: #fafafa;
+  color: #3273dc;
+}
+
+.nested-accordion-header .nested-toggle-icon {
+  position: absolute;
+  right: 1rem;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 0.8rem;
+  transition: transform 0.2s ease;
+}
+
+.nested-accordion-item.is-active .nested-accordion-header .nested-toggle-icon {
+  transform: translateY(-50%) rotate(90deg);
+}
+
+.nested-accordion-content {
+  display: none;
+}
+
+.nested-project-details {
+  padding: 0.5rem 1.25rem 1.25rem 1.25rem;
+}
+
+.project-description {
+  color: #555;
+  font-size: 0.95rem;
+  margin-bottom: 0.75rem;
+  text-align: justify;
+}
+
+.bibtex-content-box {
+  margin-top: 0.5rem;
+  animation: fadeIn 0.2s ease-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(-5px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
 
 
 
