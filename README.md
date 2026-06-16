@@ -31,6 +31,42 @@
     <em>This AI framework enables precise, automated morphometric measurements by transferring landmarks from a single annotated reference radiograph to previously unseen images using dense matching. It performs reliably across diverse anatomies without the need for additional training.</em>
 </p>
 
+## Related Projects
+
+Projects that used this framework as a tool:
+
+- **[AI Challenges the Reference Standards for Lateral Knee Morphometry](https://doi.org/...)**<br>
+  > Many clinical reference values were fixed decades ago from small patient groups and never tested at scale. Using automated AI landmark measurement on more than 41,000 lateral knee radiographs from two independent health systems, we show that the most widely used patellar height threshold systematically misclassifies knees without reported imaging finding, demonstrating how automated morphometry can re-evaluate inherited diagnostic standards.
+  <details>
+  <summary>Bibtex</summary>
+
+  ```
+  @article{tba,
+    title={...},
+    author={...},
+    journal={...},
+    year={2026},
+    doi={...}
+  }
+  ```
+  </details>
+
+- **[On the symmetry of the contralateral knee](https://doi.org/...)**<br>
+  > The contralateral knee is widely used as a reference in patellofemoral radiography, but how much side-to-side difference a routine radiograph can actually resolve has never been quantified. Using automated AI landmark measurement on more than 11,000 paired knee radiographs from a multi-site health system, we show that side-to-side differences in patellofemoral indices fall at the resolution floor of radiography itself, defining index-specific tolerance intervals within which the contralateral knee is a usable reference and beyond which it is not.
+  <details>
+  <summary>Bibtex</summary>
+
+  ```
+  @article{tba,
+    title={...},
+    author={...},
+    journal={...},
+    year={2026},
+    doi={...}
+  }
+  ```
+  </details>
+
 ## Bibtex
 
 If you find this project useful for your work, please consider citing it:
