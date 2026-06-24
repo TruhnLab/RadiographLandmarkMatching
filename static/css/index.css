@@ -141,88 +141,146 @@ button, input, select, textarea {
   font-size: smaller;
 }
 
-/* Downstream Projects Accordion Styles */
-.downstream-accordion {
-  margin-top: 1rem;
-  margin-bottom: 1rem;
-}
-
-.downstream-main-toggle {
+/* Accompanying & Downstream Projects - Card Styles */
+.downstream-section-title {
   display: flex;
-  justify-content: center;
   align-items: center;
-  transition: all 0.2s ease;
-}
-
-.downstream-main-toggle:hover h2 {
-  color: #3273dc !important; /* Elegant blue highlight on hover */
-}
-
-.downstream-accordion.is-active .main-toggle-icon {
-  transform: rotate(-180deg);
-}
-
-.downstream-main-content {
-  display: none;
-  border-top: 1px solid #dbdbdb;
-}
-
-/* Nested Accordion Styles */
-.nested-accordion-item {
-  border-bottom: 1px solid #eee;
-}
-
-.nested-accordion-item:last-child {
-  border-bottom: none;
-}
-
-.nested-accordion-header {
-  width: 100%;
-  font-family: inherit; /* inherit Noto Sans from the body instead of using default browser button font */
-  background: none;
-  border: none;
-  padding: 0.75rem 2.5rem; /* extra padding to prevent text overlapping with the chevron */
-  text-align: center;
-  font-size: 1.05rem;
-  font-weight: 500;
+  justify-content: center;
+  gap: 0.5rem;
   color: #363636;
-  position: relative;
-  cursor: pointer;
-  outline: none;
-  transition: background-color 0.2s ease, color 0.2s ease;
+  font-weight: 600;
+  margin-bottom: 1.5rem !important;
 }
 
-.nested-accordion-header:hover {
-  background-color: #fafafa;
+.downstream-section-title .icon {
   color: #3273dc;
 }
 
-.nested-accordion-header .nested-toggle-icon {
-  position: absolute;
-  right: 1rem;
-  top: 50%;
-  transform: translateY(-50%);
-  font-size: 0.8rem;
-  transition: transform 0.2s ease;
+/* Let each card size to its own content, so expanding one card does not
+   stretch its neighbour. align-items: flex-start stops the columns from
+   matching heights; the cards stay top-aligned instead. */
+.project-cards {
+  align-items: flex-start;
 }
 
-.nested-accordion-item.is-active .nested-accordion-header .nested-toggle-icon {
-  transform: translateY(-50%) rotate(90deg);
+.project-cards .column {
+  display: flex;
 }
 
-.nested-accordion-content {
-  display: none;
+.project-card {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 19rem;          /* unified collapsed height for every card */
+  overflow: hidden;
+  background: #fff;
+  border: 1px solid #e8e8e8;
+  border-radius: 12px;
+  padding: 1.5rem;
+  transition: box-shadow 0.25s ease, transform 0.25s ease, border-color 0.25s ease;
 }
 
-.nested-project-details {
-  padding: 0.5rem 1.25rem 1.25rem 1.25rem;
+/* Expanded card grows to fit its full content */
+.project-card.is-expanded {
+  height: auto;
+}
+
+.project-card:hover {
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.08);
+  transform: translateY(-3px);
+  border-color: #d5d5d5;
+}
+
+.project-card-title {
+  font-family: 'Google Sans', sans-serif;
+  font-size: 1.1rem;
+  font-weight: 600;
+  line-height: 1.35;
+  color: #2b2b2b;
+  margin-bottom: 0.85rem;
 }
 
 .project-description {
+  position: relative;
+  flex: 1 1 auto;     /* fill the space the title leaves inside the fixed card */
+  min-height: 0;      /* allow the flex child to shrink so overflow can clip */
+  overflow: hidden;
   color: #555;
   font-size: 0.95rem;
-  margin-bottom: 0.75rem;
+  margin-bottom: 0.4rem;
   text-align: justify;
+}
+
+/* While collapsed, fade the clipped text out instead of cutting it hard */
+.project-card:not(.is-expanded) .project-description::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 2.2em;
+  background: linear-gradient(to bottom, rgba(255, 255, 255, 0), #fff 92%);
+  pointer-events: none;
+}
+
+/* Expanded: let the full text show and size the card to it */
+.project-card.is-expanded .project-description {
+  flex: 0 0 auto;
+  overflow: visible;
+}
+
+.read-more-btn {
+  align-self: flex-start;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  background: none;
+  border: none;
+  padding: 0;
+  margin-bottom: 1rem;
+  font-family: inherit;
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: #3273dc;
+  cursor: pointer;
+}
+
+.read-more-btn:hover {
+  text-decoration: underline;
+}
+
+.read-more-btn .icon-rot {
+  font-size: 0.7rem;
+  transition: transform 0.25s ease;
+}
+
+.read-more-btn.is-expanded .icon-rot {
+  transform: rotate(180deg);
+}
+
+/* Pin the action buttons to the bottom so cards align neatly */
+.project-card-actions {
+  margin-top: auto;
+}
+
+.project-card-actions .buttons {
+  margin-bottom: 0;
+}
+
+/* Lighten the "Paper" buttons inside the tiles so they draw less attention.
+   A soft grey outline keeps them in the same light family as the BibTeX button,
+   so the two tile buttons read as one quiet pair rather than three styles. */
+.project-card .button.is-dark {
+  background-color: transparent;
+  border-color: #c7c7c7;
+  color: #4a4a4a;
+}
+
+.project-card .button.is-dark:hover,
+.project-card .button.is-dark:focus {
+  background-color: #f0f0f0;
+  border-color: #b5b5b5;
+  color: #363636;
 }
 
 .bibtex-content-box {

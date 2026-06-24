@@ -57,27 +57,29 @@
             <div class="is-size-5 publication-authors">
               <!-- Paper authors -->
               <span class="author-block">
-                Dennis Eschweiler<sup>1*</sup>,</span>
+                Dennis Eschweiler<sup>1,2,*</sup>,</span>
               <span class="author-block">
-                Eneko Cornejo Merodio<sup>1</sup>,</span>
+                Eneko Cornejo Merodio<sup>1,2</sup>,</span>
               <span class="author-block">
-                Felix Barajas Ordonez<sup>1</sup>,</span>
+                Felix Barajas Ordonez<sup>2</sup>,</span>
               <span class="author-block">
-                Aleksandar Lichev<sup>1</sup>,</span>
+                Aleksandar Lichev<sup>1,2</sup>,</span>
               <span class="author-block">
-                Nikol Ignatova<sup>1</sup>,</span>
+                Nikol Ignatova<sup>1,2</sup>,</span>
               <span class="author-block">
-                Marc Sebastian von der Stück<sup>1</sup>,</span>
+                Marc Sebastian von der Stück<sup>2</sup>,</span>
               <span class="author-block">
-                Christiane Kuhl<sup>1</sup>,</span>
+                Christiane Kuhl<sup>2</sup>,</span>
               <span class="author-block">
-                Daniel Truhn<sup>1</sup>,</span>
+                Daniel Truhn<sup>1,2</sup>,</span>
               <span class="author-block">
-                Sven Nebelung<sup>1*</sup></span>
+                Sven Nebelung<sup>1,2,*</sup></span>
             </div>
 
             <div class="is-size-6 publication-authors"><br>
-              <span class="author-block"><sup>1</sup>Department of Diagnostic and Interventional Radiology, University
+              <span class="author-block"><sup>1</sup>Lab for Artificial Intelligence in Medicine, Department of Diagnostic and Interventional Radiology, University
+                Hospital RWTH Aachen, Aachen, Germany</span>
+              <span class="author-block"><sup>2</sup>Department of Diagnostic and Interventional Radiology, University
                 Hospital RWTH Aachen, Aachen, Germany</span>
               <span class="eql-cntrb"><br><sup>*</sup>{deschweiler,snebelung}@ukaachen.de</span>
             </div><br>
@@ -135,100 +137,122 @@
     </div>
   </section>
 
-  <!-- Collapsible Downstream Projects Section -->
-  <section class="section hero is-small" style="padding-top: 1rem; padding-bottom: 1rem;">
+  <!-- Accompanying & Downstream Projects -->
+  <section class="section hero is-small downstream-section" style="padding-top: 1.5rem; padding-bottom: 1rem;">
     <div class="container">
-      <div class="downstream-accordion">
-            
-            <!-- Minimalist Main Header Toggle -->
-            <div class="downstream-main-toggle" style="text-align: center; margin-bottom: 0.5rem; cursor: pointer; user-select: none;">
-              <h2 class="title is-5" style="color: #363636; display: inline-flex; align-items: center; gap: 0.5rem; font-weight: 600;">
-                <i class="fas fa-chevron-down main-toggle-icon" style="font-size: 0.9rem; transition: transform 0.3s ease;"></i>
-                <span>Accompanying & Downstream Projects</span>
-              </h2>
-            </div>
 
-            <!-- Main Content Area -->
-            <div class="downstream-main-content" style="display: none; padding: 0 0.5rem;">
-              <div class="nested-accordion-group" style="margin-top: 1rem;">
-                
-                <!-- Project 1 -->
-                <div class="nested-accordion-item">
-                  <button class="nested-accordion-header">
-                    <span>AI challenges the reference standards for lateral knee morphometry</span>
-                    <i class="fas fa-chevron-right nested-toggle-icon"></i>
-                  </button>
-                  <div class="nested-accordion-content">
-                    <div class="nested-project-details">
-                      <p class="project-description">Many clinical reference values were fixed decades ago from small patient groups
-                        and never tested at scale. Using automated AI landmark measurement on more than 41,000 lateral knee radiographs
-                        from two independent health systems, we show that the most widely used patellar height threshold systematically
-                        misclassifies knees without reported imaging finding, demonstrating how automated morphometry can re-evaluate
-                        inherited diagnostic standards.
-                      </p>
-                      <div class="buttons" style="margin-top: 0.75rem;">
-                        <a href="#" class="button is-small is-rounded is-dark">
-                          <span class="icon is-small"><i class="fas fa-file-pdf"></i></span>
-                          <span>Paper - tba</span>
-                        </a>
-                        <button class="button is-small is-rounded is-light bibtex-toggle-btn">
-                          <span class="icon is-small"><i class="fas fa-code"></i></span>
-                          <span>BibTeX</span>
-                        </button>
-                      </div>
-                      <div class="bibtex-content-box" style="display: none; margin-top: 0.5rem;">
-                        <pre style="padding: 0.5rem; font-size: 0.7rem; white-space: pre-wrap; overflow-x: auto; background-color: #f5f5f5; border-radius: 4px;"><code>@article{tba,
+      <h2 class="title is-5 downstream-section-title">
+        <span class="icon"><i class="fas fa-project-diagram"></i></span>
+        <span>Accompanying &amp; Downstream Projects</span>
+      </h2>
+
+      <div class="columns is-centered project-cards">
+
+        <!-- Project 1 -->
+        <div class="column is-one-third">
+          <div class="project-card">
+            <h3 class="project-card-title">AI challenges the reference standards for lateral knee morphometry</h3>
+            <p class="project-description">Many clinical reference values were fixed decades ago from small patient groups
+              and never tested at scale. Using automated AI landmark measurement on more than 41,000 lateral knee radiographs
+              from two independent health systems, we show that the most widely used patellar height threshold systematically
+              misclassifies knees without reported imaging finding, demonstrating how automated morphometry can re-evaluate
+              inherited diagnostic standards.</p>
+            <button class="read-more-btn">
+              <span class="read-more-label">Read more</span>
+              <i class="fas fa-chevron-down icon-rot"></i>
+            </button>
+            <div class="project-card-actions">
+              <div class="buttons">
+                <a href="#" class="button is-small is-rounded is-dark">
+                  <span class="icon is-small"><i class="fas fa-file-pdf"></i></span>
+                  <span>Paper - tba</span>
+                </a>
+                <button class="button is-small is-rounded is-light bibtex-toggle-btn">
+                  <span class="icon is-small"><i class="fas fa-code"></i></span>
+                  <span>BibTeX</span>
+                </button>
+              </div>
+              <div class="bibtex-content-box" style="display: none;">
+                <pre style="padding: 0.5rem; font-size: 0.7rem; white-space: pre-wrap; overflow-x: auto; background-color: #f5f5f5; border-radius: 4px;"><code>@article{tba,
   title={tba},
   author={tba},
   journal={tba},
   year={2026}
 }</code></pre>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                <!-- Project 2 -->
-                <div class="nested-accordion-item">
-                  <button class="nested-accordion-header">
-                    <span>On the symmetry of the contralateral knee</span>
-                    <i class="fas fa-chevron-right nested-toggle-icon"></i>
-                  </button>
-                  <div class="nested-accordion-content">
-                    <div class="nested-project-details">
-                      <p class="project-description">The contralateral knee is widely used as a reference in patellofemoral radiography, 
-                        but how much side-to-side difference a routine radiograph can actually resolve has never been quantified. Using 
-                        automated AI landmark measurement on more than 11,000 paired knee radiographs from a multi-site health system, 
-                        we show that side-to-side differences in patellofemoral indices fall at the resolution floor of radiography itself, 
-                        defining index-specific tolerance intervals within which the contralateral knee is a usable reference and beyond 
-                        which it is not.</p>
-                      <div class="buttons" style="margin-top: 0.75rem;">
-                        <a href="#" class="button is-small is-rounded is-dark">
-                          <span class="icon is-small"><i class="fas fa-file-pdf"></i></span>
-                          <span>Paper - tba</span>
-                        </a>
-                        <button class="button is-small is-rounded is-light bibtex-toggle-btn">
-                          <span class="icon is-small"><i class="fas fa-code"></i></span>
-                          <span>BibTeX</span>
-                        </button>
-                      </div>
-                      <div class="bibtex-content-box" style="display: none; margin-top: 0.5rem;">
-                        <pre style="padding: 0.5rem; font-size: 0.7rem; white-space: pre-wrap; overflow-x: auto; background-color: #f5f5f5; border-radius: 4px;"><code>@article{tba,
-  title={tba},
-  author={tba},
-  journal={tba},
-  year={2026}
-}</code></pre>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
               </div>
             </div>
           </div>
         </div>
-      </section>
+
+        <!-- Project 2 -->
+        <div class="column is-one-third">
+          <div class="project-card">
+            <h3 class="project-card-title">On the symmetry of the contralateral knee</h3>
+            <p class="project-description">The contralateral knee is widely used as a reference in patellofemoral radiography,
+              but how much side-to-side difference a routine radiograph can actually resolve has never been quantified. Using
+              automated AI landmark measurement on more than 11,000 paired knee radiographs from a multi-site health system,
+              we show that side-to-side differences in patellofemoral indices fall at the resolution floor of radiography itself,
+              defining index-specific tolerance intervals within which the contralateral knee is a usable reference and beyond
+              which it is not.</p>
+            <button class="read-more-btn">
+              <span class="read-more-label">Read more</span>
+              <i class="fas fa-chevron-down icon-rot"></i>
+            </button>
+            <div class="project-card-actions">
+              <div class="buttons">
+                <a href="#" class="button is-small is-rounded is-dark">
+                  <span class="icon is-small"><i class="fas fa-file-pdf"></i></span>
+                  <span>Paper - tba</span>
+                </a>
+                <button class="button is-small is-rounded is-light bibtex-toggle-btn">
+                  <span class="icon is-small"><i class="fas fa-code"></i></span>
+                  <span>BibTeX</span>
+                </button>
+              </div>
+              <div class="bibtex-content-box" style="display: none;">
+                <pre style="padding: 0.5rem; font-size: 0.7rem; white-space: pre-wrap; overflow-x: auto; background-color: #f5f5f5; border-radius: 4px;"><code>@article{tba,
+  title={tba},
+  author={tba},
+  journal={tba},
+  year={2026}
+}</code></pre>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Project 3 (placeholder) -->
+        <div class="column is-one-third">
+          <div class="project-card">
+            <h3 class="project-card-title">Assessing pediatric hip morphometry</h3>
+            <p class="project-description">Coming soon</p>
+            <div class="project-card-actions">
+              <div class="buttons">
+                <a href="#" class="button is-small is-rounded is-dark">
+                  <span class="icon is-small"><i class="fas fa-file-pdf"></i></span>
+                  <span>Paper - tba</span>
+                </a>
+                <button class="button is-small is-rounded is-light bibtex-toggle-btn">
+                  <span class="icon is-small"><i class="fas fa-code"></i></span>
+                  <span>BibTeX</span>
+                </button>
+              </div>
+              <div class="bibtex-content-box" style="display: none;">
+                <pre style="padding: 0.5rem; font-size: 0.7rem; white-space: pre-wrap; overflow-x: auto; background-color: #f5f5f5; border-radius: 4px;"><code>@article{tba,
+  title={tba},
+  author={tba},
+  journal={tba},
+  year={2026}
+}</code></pre>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </section>
+  <!-- End accompanying projects -->
 
   <!-- Paper abstract -->
   <section class="section hero is-light">
