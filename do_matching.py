@@ -54,6 +54,7 @@ def agreement_analysis(pred_folder, img_target, id_target, save_path, format='sv
     plt.axis('off')
     plt.tight_layout()
     plt.savefig(save_path+f'.{format}', format=format, bbox_inches="tight", pad_inches=0)
+    plt.close()
 
     return prd_kpts_mean
 
@@ -142,6 +143,10 @@ def main(hparams):
 
     for target_img_path in target_img_paths:
 
+        # PREPARATIONS
+        # ------------------------
+
+        # Load target image and check if already processed
         id_target = os.path.split(target_img_path)[-1].replace('.png','').replace('.jpg','')
         processed_path = [i for i in processed_paths if os.path.split(i)[-1].startswith(f'{id_target}_')]
         if len(processed_path)>0:
@@ -149,110 +154,132 @@ def main(hparams):
             continue
         
         save_path_tmp = os.path.join(hparams.save_path, f'{id_target}_matches_tmp') if hparams.temp_results else None
+        save_path_bulk = os.path.join(hparams.save_path, f'{id_target}_matches_bulk')
 
-        # LATERALITY CHECK
-        # ------------------------
-        if not hparams.reference_left_file is None and not hparams.reference_right_file is None:
-
-            # Get reference left and right files
-            ref_left_img_file = hparams.reference_left_file+f'_image.{hparams.image_filetype}'
-            ref_left_kpt_file = hparams.reference_left_file+'_landmarks.csv'
-            ref_right_img_file = hparams.reference_right_file+f'_image.{hparams.image_filetype}'
-            ref_right_kpt_file = hparams.reference_right_file+'_landmarks.csv'
-
-            print(f'Performing laterality and anatomy check on {id_target}...')
-            _, img_target, ref_kpts_left, pred_kpts_left = compute_matches(ref_left_img_file, ref_left_kpt_file, target_img_path, roma_model, device, landmark_scaling=hparams.landmark_scaling)
-            _, img_target, ref_kpts_right, pred_kpts_right = compute_matches(ref_right_img_file, ref_right_kpt_file, target_img_path, roma_model, device, landmark_scaling=hparams.landmark_scaling)
-
-            _, _, error_left = procrustes(ref_kpts_left, pred_kpts_left)
-            _, _, error_right = procrustes(ref_kpts_right, pred_kpts_right)
-
-            print(f"Left Procrustes Error: {error_left:.4f}")
-            print(f"Right Procrustes Error: {error_right:.4f}")
-
-            if error_left > hparams.max_matching_error and error_right > hparams.max_matching_error: # TODO: optimize this threshold
-                print(f"All checks failed for {id_target}. Skipping...")
-                continue
-            elif error_left < error_right:
-                print('Detected wrong laterality. Flipping image horizontally to align with references.')
-                img_target = np.flip(img_target, axis=1)
-                io.imsave(target_img_path, img_target)
-            else:
-                print('Laterality and anatomy check passed.')
-
-        else:
-            print(f'Laterality and anatomy check skipped for {id_target}. Assuming correct laterality.')
+        # Prepare save path and variables    
+        os.makedirs(os.path.join(hparams.save_path, f'{id_target}_matches'), exist_ok=True)
+        procrustes_errors = []
+        matching_state = 0
+        # matching_state:   0 = initial matching
+        #                   1 = flipped image and restart matching
+        #                   2 = aborting due to laterality issues
+        #                   3 = finished matching and doing agreement analysis
 
 
         # MATCHING WITH REFERENCE FILES
         # ------------------------
+        while matching_state < 2: 
 
-        os.makedirs(os.path.join(hparams.save_path, f'{id_target}_matches'), exist_ok=True)
-        for num_matching, (ref_img_path, ref_kpt_path) in enumerate(zip(ref_img_files, ref_kpt_files)):
+            for num_matching, (ref_img_path, ref_kpt_path) in enumerate(zip(ref_img_files, ref_kpt_files)):
 
-            # Check if maximum number of references reached
-            if hparams.num_references > 0 and num_matching >= hparams.num_references:
-                break
+                # Check if maximum number of references reached
+                if num_matching >= count_ref_used:
+                    break
 
-            # Extract ID from file names
-            id_img = os.path.split(ref_img_path)[-1].replace(f'_image.{hparams.image_filetype}', '')
-            id_kpt = os.path.split(ref_kpt_path)[-1].replace('_landmarks.csv', '')
+                # Extract ID from file names
+                id_img = os.path.split(ref_img_path)[-1].replace(f'_image.{hparams.image_filetype}', '')
+                id_kpt = os.path.split(ref_kpt_path)[-1].replace('_landmarks.csv', '')
 
-            assert id_img == id_kpt, f"ID mismatch: {id_img} != {id_kpt}"
+                assert id_img == id_kpt, f"ID mismatch: {id_img} != {id_kpt}"
 
-            # Check if the image has already been processed
-            save_path_image = os.path.join(hparams.save_path, f'{id_target}_matches', f'{id_img}_to_{id_target}.png')
-            save_path_matches = os.path.join(hparams.save_path, f'{id_target}_matches', f'{id_img}_to_{id_target}_matches.csv')
-            save_path_metrics = os.path.join(hparams.save_path, f'{id_target}_matches', f'{id_img}_to_{id_target}_metrics.json')
-            if os.path.exists(save_path_image) and os.path.exists(save_path_matches) and os.path.exists(save_path_metrics):
-                print(f"Skipping {save_path_image} as matches already exist.")
-                continue
+                # Skip self-matching if specified
+                if hparams.skip_selfmatching and id_img == id_target:
+                    print(f"Skipping self-matching for {id_target}...")
+                    continue
 
-            # Matching
-            print(f"{num_matching+1}/{count_ref_used} {id_img} to {id_target}...")
-            img_ref, img_target, keypoints_source, registered_kpts = compute_matches(ref_img_path, ref_kpt_path, target_img_path, roma_model, device, landmark_scaling=hparams.landmark_scaling)
+                # Check if the image has already been processed
+                save_path_base = os.path.join(hparams.save_path, f'{id_target}_matches')
+                save_path_matches = os.path.join(save_path_base, f'{id_img}_to_{id_target}_matches.csv')
+                if os.path.exists(save_path_matches):
+                    print(f"Skipping {save_path_base} as matches already exist.")
+                    continue
 
-            # Calculate confidence
-            _, _, procrustes_error = procrustes(keypoints_source, registered_kpts)
-            matching_confidence = 1 - np.clip(procrustes_error, 0, hparams.max_matching_error) / hparams.max_matching_error
-            match_data = {
-                "matching_confidence": float(f"{matching_confidence:.4f}"),
-                "procrustes_error": float(f"{procrustes_error:.4f}")
-            }
-            print(f"Matching done with a confidence of {matching_confidence:.2f}...")
+                # Matching
+                print(f"{num_matching+1}/{count_ref_used} {id_img} to {id_target}...")
+                img_ref, img_target, keypoints_source, registered_kpts = compute_matches(ref_img_path, ref_kpt_path, target_img_path, roma_model, device, landmark_scaling=hparams.landmark_scaling)
 
-            # Save results
-            plot_images([img_ref, img_target])
-            plot_matches(keypoints_source, registered_kpts, color='red', lw=1.5, ps=6, a=0.5)
-            plt.title(f'Matching confidence: {matching_confidence:.2f} ({procrustes_error:.4f})')
-            save_plot(save_path_image)
-            plt.close()
+                # Calculate confidence
+                _, _, procrustes_error = procrustes(keypoints_source, registered_kpts)
+                procrustes_errors.append(procrustes_error)
+                matching_confidence = 1 - np.clip(procrustes_error, 0, hparams.max_matching_error) / hparams.max_matching_error
+                print(f"Matching done with a confidence of {matching_confidence:.2f}...")
 
-            create_csv(registered_kpts.numpy(force=True).astype(int), save_path_matches.replace('.csv',''), test_split=0, val_split=0)
-            
-            with open(save_path_metrics, 'w') as f:
-                json.dump(match_data, f, indent=2)
+                # # Save image with matches for visualization
+                # save_path_image = os.path.join(save_path_base, f'{id_img}_to_{id_target}.png')
+                # plot_images([img_ref, img_target])
+                # plot_matches(keypoints_source, registered_kpts, color='red', lw=1.5, ps=6, a=0.5)
+                # plt.title(f'Matching confidence: {matching_confidence:.2f} ({procrustes_error:.4f})')
+                # save_plot(save_path_image)
+                # plt.close()
 
-            # Create temporary visual results if specified
-            if hparams.temp_results:
-                # Remove previous temporary results if existing
-                if os.path.exists(save_path_tmp+f'_{num_matching-1}.png'):
-                    os.remove(save_path_tmp+f'_{num_matching-1}.png')
-                _ = agreement_analysis(hparams.save_path, img_target, id_target, save_path_tmp+f'_{num_matching}', format='png')
+                create_csv(registered_kpts.numpy(force=True).astype(int), save_path_matches.replace('.csv',''), test_split=0, val_split=0)
+                
+                # # Save matching confidence and procrustes error 
+                # match_data = {
+                #     "matching_confidence": float(f"{matching_confidence:.4f}"),
+                #     "procrustes_error": float(f"{procrustes_error:.4f}")
+                # }
+                # save_path_metrics = os.path.join(save_path_base, f'{id_img}_to_{id_target}_metrics.json')
+                # with open(save_path_metrics, 'w') as f:
+                #     json.dump(match_data, f, indent=2)
 
-        
-        # AGREEMENT CALCULATION
-        # ------------------------
-        
-        # Create final results
-        save_path_bulk = os.path.join(hparams.save_path, f'{id_target}_matches_bulk')
-        prd_kpts_mean = agreement_analysis(hparams.save_path, img_target, id_target, save_path_bulk, format='svg')
-        create_csv(prd_kpts_mean, save_path_bulk, test_split=0, val_split=0)
+                # Create temporary visual results if specified
+                if hparams.temp_results:
+                    # Remove previous temporary results if existing
+                    if os.path.exists(save_path_tmp+f'_{num_matching-1}.png'):
+                        os.remove(save_path_tmp+f'_{num_matching-1}.png')
+                    # Save current temporary result
+                    _ = agreement_analysis(hparams.save_path, img_target, id_target, save_path_tmp+f'_{num_matching}', format='png')
 
-        # Remove temporary results if existing
-        if hparams.temp_results:
-            for f in glob.glob(save_path_tmp + '*.png'):
-                os.remove(f)
+                # Check if the procrustes error exceeded the threshold multiple times (indicating potential laterality or anatomy mismatch)
+                num_violations = np.sum(np.array(procrustes_errors) > hparams.max_matching_error)
+                if num_violations >= np.minimum(5, len(ref_img_files)): 
+                    print(f'Detected wrong laterality in {num_violations}/{len(ref_img_files)} matchings.')
+
+                    # Delete all current matching results for this target image
+                    for f in glob.glob(os.path.join(save_path_base, '*')):
+                        os.remove(f)
+
+                    if matching_state == 0:
+                        print('Flipping image horizontally to align with references. Deleting previous matching results and restarting matching with flipped image...')
+
+                        # Flip the target image horizontally
+                        img_target = np.flip(img_target, axis=1)
+                        io.imsave(target_img_path, img_target)
+
+                        # Save procrustes errors for reference and reset
+                        # with open(save_path_bulk + '_procrustes_violation.json', 'w') as f:
+                        #     json.dump(procrustes_errors, f, indent=2)
+                        procrustes_errors = []
+                
+                    else:
+                        print('Flipping already done but laterality check still failed. Stopping matching to avoid infinite loop and including results for reference.')
+                        os.rmdir(save_path_base) 
+
+                    # Break current matching loop to restart with flipped image or stop if already flipped
+                    matching_state += 1
+                    break
+
+            if num_matching == count_ref_used-1:
+                matching_state = 3 # Finished
+
+                # AGREEMENT CALCULATION
+                # ------------------------
+                
+                # Create final results
+                prd_kpts_mean = agreement_analysis(hparams.save_path, img_target, id_target, save_path_bulk, format='svg')
+                create_csv(prd_kpts_mean, save_path_bulk, test_split=0, val_split=0)
+
+                # Save laterality metrics
+                with open(save_path_bulk + '_procrustes.json', 'w') as f:
+                        json.dump(procrustes_errors, f, indent=2)
+
+                # Remove temporary results if existing
+                if hparams.temp_results:
+                    for f in glob.glob(save_path_tmp + '*.png'):
+                        os.remove(f)
+
+
 
 
 
@@ -264,7 +291,7 @@ if __name__ == '__main__':
 
     parent_parser = ArgumentParser(
         description='Roma Medical - AI-powered knee X-ray landmark matching and analysis',
-        epilog='Example: python do_matching.py --data_path /path/to/targets --reference_path /path/to/references',
+        epilog='Example: python do_matching.py --data_path /path/to/images --reference_path /path/to/references',
         formatter_class=RawDescriptionHelpFormatter,
         add_help=True
     )
@@ -302,20 +329,6 @@ if __name__ == '__main__':
         type=str,
         default=r'path_to_save_directory',
         help='Path where results will be saved'
-    )
-
-    parent_parser.add_argument(
-        '--reference_left_file',
-        type=str,
-        default=r'path_to_left_reference',
-        help='Reference file for left laterality check (optional)'
-    )
-    
-    parent_parser.add_argument(
-        '--reference_right_file',
-        type=str,
-        default=r'path_to_right_reference',
-        help='Reference file for right laterality check (optional)'
     )
     
     parent_parser.add_argument(
@@ -367,6 +380,12 @@ if __name__ == '__main__':
         "--temp_results",
         action="store_true",
         help="If set, create temporary results. Default is False."
+    )
+
+    parent_parser.add_argument(
+        "--skip_selfmatching",
+        action="store_true",
+        help="If set, skip self-matching. Default is False."
     )
 
     
