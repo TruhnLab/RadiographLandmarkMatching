@@ -7,6 +7,7 @@ import glob
 import numpy as np
 import pandas as pd
 from argparse import ArgumentParser
+from tqdm import tqdm
 
 from utils.utils import read_csv, load_config
 from measurements.measurements import get_function_dict
@@ -43,13 +44,13 @@ def main(hparams):
     # MEASUREMENT
     # ------------------------
 
-    for kpt_path in kpt_paths:
+    for kpt_path in tqdm(kpt_paths):
 
         id_target = os.path.split(kpt_path)[-1].replace(f'_matches_bulk.csv','')
         new_measure = [id_target,]
 
         # Load data
-        kpt_data = read_csv(kpt_path)
+        kpt_data = read_csv(r"\\?\\"+kpt_path)
         kpt_data = np.array([[float(y)*config['mpp'],float(x)*config['mpp']] for x,y in kpt_data])
 
         # calculate measures
@@ -92,7 +93,7 @@ if __name__ == '__main__':
     parent_parser.add_argument(
         '--config_path',
         type=str,
-        default=r'path_to_config_file'
+        default=r'experiment_config_windows.json'
     )
 
     parent_parser.add_argument(
