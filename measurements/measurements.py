@@ -53,13 +53,13 @@ def best_fit_line_from_landmarks(landmarks_subset):
     y = np.array([pt[1] for pt in landmarks_subset])
 
     # Fit line: y = mx + b
-    A = np.vstack([x, np.ones(len(x))]).T
-    m, b = np.linalg.lstsq(A, y, rcond=None)[0]
+    A = np.vstack([y, np.ones(len(y))]).T
+    m, b = np.linalg.lstsq(A, x, rcond=None)[0]
 
-    # Choose two x values to create two points on the line
-    x0, x1 = min(x), max(x)
-    point1 = (x0, m * x0 + b)
-    point2 = (x1, m * x1 + b)
+    # Choose two y values to create two points on the line
+    y0, y1 = min(y), max(y)
+    point1 = (m * y0 + b, y0)
+    point2 = (m * y1 + b, y1)
 
     return point1, point2
 
@@ -152,7 +152,7 @@ def get_function_dict(mode='feet_ap'):
         function_dict = {
                         'Sulcus Angle': [sulcus_angle, vis_sulcus_angle, kpts_sulcus_angle], #0
                         'Congruence Angle': [congruence_angle, vis_congruence_angle, kpts_congruence_angle], #1
-                        'Patella Tilting Angle': [patella_tilting_angle, vis_patella_tilting_angle, kpts_patella_tilting_angle], #2
+                        'Patella Tilt Angle': [patella_tilt_angle, vis_patella_tilt_angle, kpts_patella_tilt_angle], #2
                         'Lateral Patellofemoral Angle': [lateral_patellofemoral_angle, vis_lateral_patellofemoral_angle, kpts_lateral_patellofemoral_angle], #3
                         }
         
@@ -1750,7 +1750,7 @@ def kpts_sulcus_angle():
 
 #---------------------------------------------------------------------
 
-def patella_tilting_angle(landmarks):
+def patella_tilt_angle(landmarks):
     
     # Calculate the axes
     anterior_interconylar_line = landmarks[3] - landmarks[6]
@@ -1762,7 +1762,7 @@ def patella_tilting_angle(landmarks):
     return angle_deg
 
 
-def vis_patella_tilting_angle(landmarks):
+def vis_patella_tilt_angle(landmarks):
     
     return [landmarks[3], landmarks[6], landmarks[11], landmarks[14]],\
            [[landmarks[3], landmarks[6]], [landmarks[11], landmarks[14]]],\
@@ -1771,7 +1771,7 @@ def vis_patella_tilting_angle(landmarks):
            [LINE_COLOR, LINE_COLOR],\
            []
 
-def kpts_patella_tilting_angle():
+def kpts_patella_tilt_angle():
     return [3, 6, 11, 14]
 
 #---------------------------------------------------------------------
@@ -1807,14 +1807,13 @@ def congruence_angle(landmarks):
     # Calculate the axes
     lateral_condyle = landmarks[0] - landmarks[3]
     medial_condyle = landmarks[0] - landmarks[6]
-    center_line = landmarks[0] - landmarks[7]
+    patella_apex_line = landmarks[0] - landmarks[7]
 
     # Calculate the angle
-    suculus_angle_deg = calculate_angle(lateral_condyle, medial_condyle)
-    center_angle_deg_1 = calculate_angle(lateral_condyle, center_line)
-    center_angle_deg_2 = calculate_angle(medial_condyle, center_line)
+    sulcus_angle_deg = calculate_angle(lateral_condyle, medial_condyle)
+    center_angle_deg = calculate_angle(lateral_condyle, patella_apex_line)
 
-    congruence_angle_deg = suculus_angle_deg/2 - np.minimum(center_angle_deg_1, center_angle_deg_2)
+    congruence_angle_deg = sulcus_angle_deg/2 - center_angle_deg
 
     return congruence_angle_deg
 
@@ -1970,23 +1969,23 @@ kpt_names_knee_lateral = [
     ['4', 'Tibia, tibial tuverosity'],
     ['5', 'Tibia, posterior cortex'],
     ['6', 'Tibia, posterior cortex'],
-    ['7', 'Tibia, anterior edge of tibial plateau'],
+    ['7', 'Tibia, tibial plateau'],
     ['8', 'Tibia, posterior edge of tibial plateau'],
     ['9', 'Tibia, center'],
     ['10', 'Tibia, center'],
-    ['11', 'Tibia, posterior edge of tibial plateau'],
-    ['12', 'Tibia, posterior edge of tibial plateau'],
-    ['13', 'Tibia, posterior edge of tibial plateau'],
-    ['14', 'Tibia, posterior edge of tibial plateau'],
-    ['15', 'Tibia, posterior edge of tibial plateau'],
+    ['11', 'Tibia, tibial plateau'],
+    ['12', 'Tibia, tibial plateau'],
+    ['13', 'Tibia, tibial plateau'],
+    ['14', 'Tibia, tibial plateau'],
+    ['15', 'Tibia, tibial plateau'],
     ['16', 'Tibia, posterior cortex'],
     ['17', 'Tibia, posterior cortex'],
     ['18', 'Tibia, center'],
     ['19', 'Tibia, center'],
-    ['20', 'Tibia, superior cortex'],
-    ['21', 'Tibia, superior cortex'],
-    ['22', 'Tibia, superior cortex'],
-    ['23', 'Tibia, superior cortex'],
+    ['20', 'Tibia, anterior cortex'],
+    ['21', 'Tibia, anterior cortex'],
+    ['22', 'Tibia, anterior cortex'],
+    ['23', 'Tibia, anterior cortex'],
     ['24', 'Patella, base (upper border)'],
     ['25', 'Tibia, anterior edge of tibial plateau']
 ]
@@ -1996,7 +1995,7 @@ kpt_names_knee_lateral = [
 def insall_salvati_ratio(landmarks):
     
     patellar_tendon_line = landmarks[2] - landmarks[3]
-    patellar_line = landmarks[23] - landmarks[2]
+    patellar_line = landmarks[0] - landmarks[2]
 
     # Calculate the measurement
     patellar_tendon_length = np.linalg.norm(patellar_tendon_line)
@@ -2010,20 +2009,22 @@ def insall_salvati_ratio(landmarks):
 
 def vis_insall_salvati_ratio(landmarks):
     
-    return [landmarks[23], landmarks[2], landmarks[3]],\
-           [[landmarks[23], landmarks[2]], [landmarks[2], landmarks[3]]],\
+    return [landmarks[0], landmarks[2], landmarks[3]],\
+           [[landmarks[0], landmarks[2]], [landmarks[2], landmarks[3]]],\
            [],\
            [POINT_COLOR, POINT_COLOR, POINT_COLOR],\
            [LINE_COLOR, LINE_COLOR],\
            []
 
 def kpts_insall_salvati_ratio():
-    return [23, 2, 3]
+    return [0, 2, 3]
 
 #---------------------------------------------------------------------
 
 def modified_insall_salvati_ratio(landmarks):
     
+    # patellar_tendon_line = landmarks[1] - landmarks[3]
+    # patellar_line = landmarks[0] - landmarks[1]
     patellar_tendon_line = landmarks[1] - landmarks[3]
     patellar_line = landmarks[0] - landmarks[1]
 
@@ -2075,17 +2076,17 @@ def kpts_caton_deschamps_index():
 
 def blackburn_peel_ratio(landmarks):
     
-    patella_to_tibial_plateau_length = np.linalg.norm(landmarks[24] - landmarks[1])
-    articular_surface1, articular_surface2 = best_fit_line_from_landmarks([landmarks[6], landmarks[7], landmarks[10], landmarks[11], landmarks[12], landmarks[13], landmarks[14]])
+    patellar_articular_surface_length = np.linalg.norm(landmarks[0] - landmarks[1])
+    articular_surface1, articular_surface2 = best_fit_line_from_landmarks([landmarks[6], landmarks[7], landmarks[10], landmarks[11], landmarks[12], landmarks[13], landmarks[14], landmarks[24]])
     patella_articular_surface_height = perpendicular_point_on_line(articular_surface1, articular_surface2, landmarks[1])
-    patellar_articular_surface_length = np.linalg.norm(patella_articular_surface_height - landmarks[1])
+    patella_to_tibial_plateau_length = np.linalg.norm(patella_articular_surface_height - landmarks[1])
 
     return patella_to_tibial_plateau_length/patellar_articular_surface_length
 
 
 def vis_blackburn_peel_ratio(landmarks):
     
-    articular_surface1, articular_surface2 = best_fit_line_from_landmarks([landmarks[6], landmarks[7], landmarks[10], landmarks[11], landmarks[12], landmarks[13], landmarks[14]])
+    articular_surface1, articular_surface2 = best_fit_line_from_landmarks([landmarks[6], landmarks[7], landmarks[10], landmarks[11], landmarks[12], landmarks[13], landmarks[14], landmarks[24]])
     patella_articular_surface_height = perpendicular_point_on_line(articular_surface1, articular_surface2, landmarks[1])
 
     return [landmarks[6], landmarks[7], landmarks[10], landmarks[11], landmarks[12], landmarks[13], landmarks[14], landmarks[24], landmarks[0], landmarks[1]],\
