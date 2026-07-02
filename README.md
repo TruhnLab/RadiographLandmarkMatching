@@ -20,8 +20,8 @@
     Sven Nebelung
   </p>
   <h2 align="center"><p>
-    <a href="https://doi.org/10.1007/s00330-026-12555-y" align="center">Paper</a> | 
-    <a href="https://truhnlab.github.io/RadiographLandmarkMatching/" align="center">Project Page</a>
+    <a href="tba" align="center">Paper</a> | 
+    <a href="tba" align="center">Project Page</a>
   </p></h2>
   <div align="center"></div>
 </p>
@@ -31,53 +31,14 @@
     <em>This AI framework enables precise, automated morphometric measurements by transferring landmarks from a single annotated reference radiograph to previously unseen images using dense matching. It performs reliably across diverse anatomies without the need for additional training.</em>
 </p>
 
-## Related Projects
-
-Projects that used this framework as a tool:
-
-- **[AI Challenges the Reference Standards for Lateral Knee Morphometry](https://doi.org/...)**<br>
-  > Many clinical reference values were fixed decades ago from small patient groups and never tested at scale. Using automated AI landmark measurement on more than 41,000 lateral knee radiographs from two independent health systems, we show that the most widely used patellar height threshold systematically misclassifies knees without reported imaging finding, demonstrating how automated morphometry can re-evaluate inherited diagnostic standards.
-  <details>
-  <summary>Bibtex</summary>
-
-  ```
-  @article{tba,
-    title={...},
-    author={...},
-    journal={...},
-    year={2026},
-    doi={...}
-  }
-  ```
-  </details>
-
-- **[On the symmetry of the contralateral knee](https://doi.org/...)**<br>
-  > The contralateral knee is widely used as a reference in patellofemoral radiography, but how much side-to-side difference a routine radiograph can actually resolve has never been quantified. Using automated AI landmark measurement on more than 11,000 paired knee radiographs from a multi-site health system, we show that side-to-side differences in patellofemoral indices fall at the resolution floor of radiography itself, defining index-specific tolerance intervals within which the contralateral knee is a usable reference and beyond which it is not.
-  <details>
-  <summary>Bibtex</summary>
-
-  ```
-  @article{tba,
-    title={...},
-    author={...},
-    journal={...},
-    year={2026},
-    doi={...}
-  }
-  ```
-  </details>
-
 ## Bibtex
 
 If you find this project useful for your work, please consider citing it:
 ```
-@article{eschweiler2026RadiographMatching,
-  title={An Artificial Intelligence Framework for Universal Landmark Matching and Morphometry in Musculoskeletal Radiography},
-  author={Dennis Eschweiler and Eneko Cornejo Merodio and Felix Barajas Ordonez and Aleksandar Lichev and Nikol Ignatova and Marc Sebastian von der St{\"u}ck and Christiane K. Kuhl and Daniel Truhn and Sven Nebelung},
-  journal={European Radiology},
-  pages={1--14},
-  year={2026},
-  doi={10.1007/s00330-026-12555-y}
+@article{eschweiler2025zeroshotmsklandmark,
+ title={Zero-Shot Artificial Intelligence-based Landmark Matching for Versatile and Anatomy-Agnostic Radiograph Analysis},
+ author={Dennis Eschweiler and Eneko Cornejo Merodio and Marc Sebastian Huppertz and Aleksandar Lichev and Nikol Ignatova and Daniel Truhn and Christiane Kuhl and Sven Nebelung},
+ year={2025}
 }
 ```
 
@@ -113,23 +74,23 @@ Matches landmarks from reference images to target images using RoMa (Robust Matc
 python do_matching.py \
   --reference_path "path/to/reference/images" \
   --data_path "path/to/target/images" \
-  --save_path "path/to/output" \
-  --config_tag "knee_lateral"
+  --save_path "path/to/output"
 ```
 
 **Key Parameters:**
-- `--reference_path`: Directory containing reference images (`*_image.jpg`) and landmarks (`*_landmarks.csv`)
+- `--reference_path`: Directory containing reference images (`*_image.jpg`) and landmarks (`*_landmarks.csv`); searched recursively, so per-case subfolders work too
 - `--data_path`: Directory with target images to analyze
 - `--save_path`: Output directory for matches and results
-- `--reference_left_file` / `--reference_right_file`: Optional laterality check references
+- `--image_filetype`: Image extension of references and targets (default: `jpg`)
+- `--num_references`: How many references to match against (`-1` = all; default `-1`)
+- `--reference_rank_file`: Optional JSON ranking to select the top-N references (default: none, so the first N by name are used)
 - `--max_matching_error`: Maximum allowed Procrustes error (default: 500)
 - `--coarse_res` / `--upsample_res`: Model resolution settings
 
-**Output:**
-- Individual match visualizations (`{ref_id}_to_{target_id}.png`)
-- Landmark coordinates (`{ref_id}_to_{target_id}_matches.csv`)
-- Matching metrics (`{ref_id}_to_{target_id}_metrics.json`)
-- Consensus landmarks (`{target_id}_matches_bulk.csv`)
+**Output** (per target image, under `save_path`):
+- Per-reference landmarks (`{target_id}_matches/{ref_id}_to_{target_id}_matches.csv`)
+- Consensus landmarks (`{target_id}_matches_bulk.csv`) + overlay (`{target_id}_matches_bulk.svg`)
+- Per-reference Procrustes errors (`{target_id}_matches_bulk_procrustes.json`)
 
 ### 2. Measurements (`do_measurements.py`)
 Calculates clinical measurements from matched landmarks using predefined measurement functions.
@@ -162,51 +123,45 @@ The `experiment_config_windows.json` file contains measurement configurations:
 ```bash
 # 1. Match landmarks
 python do_matching.py \
-  --reference_path "/path/to/reference/images" \
-  --data_path "/path/to/target/images" \
-  --save_path "/path/for/saving/matching" \
-  --config_tag "knee_lateral"
+  --reference_path "E:/data/UKAKneeX/LATERAL_ALL_References" \
+  --data_path "C:/path/to/target/images" \
+  --save_path "C:/path/to/results"
 
 # 2. Calculate measurements
 python do_measurements.py \
-  --data_path "/path/to/matchings" \
-  --save_path "/path/for/saving/measurements" \
-  --config_tag "knee_lateral"
+  --data_path "C:/path/to/results" \
+  --save_path "C:/path/to/results" \
+  --config_tag "knee_lateral" \
+  --config_path "experiment_config_windows.json"
 ```
 
 
-## Option 2: Docker (Work in Progress)
-The recommended way to run this project is using Docker with the production integration script:
+## Option 2: Dockerized inference service (self-hosted)
+You can run the pipeline as a self-hosted service on your own GPU machine. The RoMa
+model loads once and stays in memory; clients send a radiograph with `anatomy` and
+`projection` (and optional `mpp`) and get back the consensus landmarks and
+measurements. This repo provides the code and tooling to deploy it; it is not a
+hosted endpoint. Once running, it is reachable two ways:
 
-- Tested with Python 3.10
-- Docker recommended with NVIDIA support for GPU acceleration
+- REST: `POST /process` (multipart image upload).
+- MCP: a remote MCP server at `/mcp` for AI agents.
 
-**Production Usage:**
-```python
-from docker.run_production import RomaMedicalDocker
-
-# Initialize Docker runner
-roma_docker = RomaMedicalDocker("roma_medical:latest")
-
-# Run matching with temporary directories (matches project architecture)
-results = roma_docker.run_matching(
-    data_path="/path/to/target/images",           # Folder containing images to analyze
-    reference_path="/path/to/reference/files",   # Folder with reference images & landmarks
-    reference_left_path="/path/to/left/ref",     # Base path for left laterality check
-    reference_right_path="/path/to/right/ref",   # Base path for right laterality check
-    output_dir="/path/to/save/results",          # Where to save results permanently
-    max_matching_error=500,
-    image_filetype="jpg"
-)
-```
-
-**Build Instructions (Required First Step):**
-
-⚠️ **Important**: You must build the Docker image before using it.
+A Caddy HTTPS proxy with API-key auth fronts the model and MCP containers; the whole
+stack is managed by [`docker/service.sh`](docker/service.sh). Weights and reference
+sets are mounted at runtime.
 
 ```bash
-# From the main project directory (roma_medical/)
-docker build -f docker/Dockerfile -t roma_medical:latest .
+# on your GPU machine (settings in service.env; see docker/README.md)
+./service.sh start
+./service.sh status
 ```
-For detailed Docker documentation, see [`docker/README.md`](docker/README.md).
+
+```bash
+# REST call (self-signed cert, so curl -k)
+curl -k -X POST https://<server>/process -H "X-API-Key: <key>" \
+  -F "image=@target.jpg" -F "anatomy=knee" -F "projection=lateral"
+```
+
+Full setup, reference layout, the REST contract, and MCP integration are in
+[`docker/README.md`](docker/README.md).
 

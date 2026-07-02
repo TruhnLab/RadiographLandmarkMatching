@@ -329,14 +329,14 @@ if __name__ == '__main__':
     parent_parser.add_argument(
         '--reference_path',
         type=str,
-        default=r'E:\data\UKAKneeX\LATERAL_ALL_References\*',
-        help='Path to reference images and landmark files'
+        required=True,
+        help='Path to the directory containing reference images (*_image.<ext>) and landmark files (*_landmarks.csv)'
     )
 
     parent_parser.add_argument(
         '--reference_rank_file',
         type=str,
-        default=None,#r'E:\data\UKAKneeX\AXIAL_LEFT\reference_distances_knee_axial_left.json',
+        default=None,
         help='Path to reference ranking file (JSON format)'
     )
     
@@ -350,15 +350,15 @@ if __name__ == '__main__':
     parent_parser.add_argument(
         '--data_path',
         type=str,
-        default=r'E:\data\UKAKneeX\LATERAL_LEFT\*',
-        help='Path to target images to be processed'
+        required=True,
+        help='Path to the directory containing target images to be processed'
     )
 
     parent_parser.add_argument(
         '--save_path',
         type=str,
-        default=r'E:\experiments\MSK_Landmarks_2D\test\test_Knee_LATERAL_Left',
-        help='Path where results will be saved'
+        required=True,
+        help='Path to the directory where results will be saved'
     )
     
     parent_parser.add_argument(

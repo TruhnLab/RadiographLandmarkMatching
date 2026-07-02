@@ -85,30 +85,36 @@ if __name__ == '__main__':
     # ------------------------
     # these are deploy-related arguments
 
-    parent_parser = ArgumentParser(add_help=False)
+    parent_parser = ArgumentParser(
+        description='Compute clinical measurements from matched landmarks.'
+    )
 
     parent_parser.add_argument(
         '--data_path',
         type=str,
-        default=r'E:\experiments\MSK_Landmarks_2D\ROMA_EmoryKneeX_LATERAL_PAIRS'
+        required=True,
+        help='Path to the directory containing *_matches_bulk.csv files from the matching step'
     )
 
     parent_parser.add_argument(
         '--save_path',
         type=str,
-        default=r'E:\experiments\MSK_Landmarks_2D\ROMA_EmoryKneeX_LATERAL_PAIRS'
+        required=True,
+        help='Path to the directory where measurement results will be saved'
     )
 
     parent_parser.add_argument(
         '--config_path',
         type=str,
-        default=r'C:\Users\deschweiler\Documents\KneeMRI_PatellofemoralMeasurements\roma_medical\experiment_config_windows.json'
+        default=os.path.join(os.path.dirname(os.path.abspath(__file__)), 'experiment_config_windows.json'),
+        help='Path to the experiment configuration JSON file (defaults to the file bundled next to this script)'
     )
 
     parent_parser.add_argument(
         '--config_tag',
         type=str,
-        default='knee_lateral_100ref'
+        default='knee_lateral',
+        help='Configuration key to use from the experiment config file'
     )
 
 
