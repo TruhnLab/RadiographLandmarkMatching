@@ -1,0 +1,6 @@
+{
+  "_comment": "Service template: one entry per supported anatomy_projection. do_preparation.py reads the entry matching the requested anatomy/projection, injects the runtime mpp (or falls back to the default below) and resolved paths, and writes a per-job config consumed by do_matching + do_measurements. References are single-orientation, so there are no left/right entries. 'reference_dir' is the subfolder under the references root (defaults to the entry key if omitted). CURRENTLY ENABLED: knee_lateral, knee_axial. Others (knee_ap, feet_lateral, feet_ap, shoulder_ap, shoulder_y, hip_ap) will be added once their reference sets are available.",
+
+  "knee_lateral":  { "mode": "knee_lateral",  "mpp": 0.148, "landmark_scaling": [1, 1], "num_references": -1, "max_matching_error": 500 },
+  "knee_axial":    { "mode": "knee_axial",    "mpp": 0.148, "landmark_scaling": [1, 1], "num_references": -1, "max_matching_error": 500 }
+}

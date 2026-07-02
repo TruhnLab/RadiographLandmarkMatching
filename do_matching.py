@@ -60,11 +60,55 @@ def agreement_analysis(pred_folder, img_target, id_target, save_path, format='sv
 
 
 
-def main(hparams):
+def setup_model(hparams, device):
+
+    """
+    Build the RoMa matching model and load its weights onto ``device``.
+
+    Split out from ``main`` so a long-running service can load the model once
+    at startup and reuse it across many requests instead of paying the (large)
+    weight-loading and ``torch.compile`` cost on every call.
+    """
+
+    # ------------------------
+    # SET UP MODEL
+    # ------------------------
+
+    # Load weights directly to the correct device
+    try:
+        weights = load_model_weights("ThirdParty/model_weights/roma_outdoor.pth", device)
+    except:
+        print('No model weights found. Downloading default weights (internet required).')
+        weights = None
+    try:
+        dinov2_weights = load_model_weights("ThirdParty/model_weights/dinov2_vitl14_pretrain.pth", device)
+    except:
+        print('No model weights found. Downloading default weights (internet required).')
+        dinov2_weights = None
+
+    # Create the model with pre-loaded weights
+    roma_model = roma_outdoor(device=device,
+                              weights=weights,
+                              dinov2_weights=dinov2_weights,
+                              coarse_res=hparams.coarse_res,
+                              upsample_res=hparams.upsample_res)
+    roma_model.eval()
+    try: # not yet working on windows (as of 06.25)
+        roma_model = torch.compile(roma_model)
+    except:
+        pass
+
+    return roma_model
+
+
+
+def main(hparams, roma_model=None):
 
     """
     Main training routine specific for this project
     :param hparams:
+    :param roma_model: optional pre-loaded model (e.g. from a resident service).
+                       If ``None``, the model is built from ``hparams``.
     """
 
     # ------------------------
@@ -79,9 +123,10 @@ def main(hparams):
     target_img_paths = glob.glob(os.path.join(hparams.data_path, f'*.{hparams.image_filetype}'))
     print('Found {0} target image files'.format(len(target_img_paths)))
 
-    # Get all reference files
-    ref_img_files = sorted(glob.glob(os.path.join(hparams.reference_path, f'*_image.{hparams.image_filetype}')))
-    ref_kpt_files = sorted(glob.glob(os.path.join(hparams.reference_path, '*_landmarks.csv')))
+    # Get all reference files. Recursive globbing supports both a flat reference
+    # folder and per-case subfolders (e.g. references/patient1/*_image.jpg).
+    ref_img_files = sorted(glob.glob(os.path.join(hparams.reference_path, '**', f'*_image.{hparams.image_filetype}'), recursive=True))
+    ref_kpt_files = sorted(glob.glob(os.path.join(hparams.reference_path, '**', '*_landmarks.csv'), recursive=True))
     assert len(ref_img_files) == len(ref_kpt_files), f"Mismatch between number of reference images and keypoint files. {len(ref_img_files)} images and {len(ref_kpt_files)} keypoint files found."
     
     # Sort references based on ranking scores if provided
@@ -109,31 +154,11 @@ def main(hparams):
 
     # ------------------------
     # SET UP MODEL
-    # ------------------------ 
+    # ------------------------
 
-    # Load weights directly to the correct device
-    try:
-        weights = load_model_weights("ThirdParty/model_weights/roma_outdoor.pth", device)
-    except:
-        print('No model weights found. Downloading default weights (internet required).')
-        weights = None
-    try: 
-        dinov2_weights = load_model_weights("ThirdParty/model_weights/dinov2_vitl14_pretrain.pth", device)
-    except:
-        print('No model weights found. Downloading default weights (internet required).')
-        dinov2_weights = None
-
-    # Create the model with pre-loaded weights
-    roma_model = roma_outdoor(device=device,
-                              weights=weights,
-                              dinov2_weights=dinov2_weights,
-                              coarse_res=hparams.coarse_res,
-                              upsample_res=hparams.upsample_res)
-    roma_model.eval()
-    try: # not yet working on windows (as of 06.25)
-        roma_model = torch.compile(roma_model)
-    except:
-        pass
+    # Build the model unless a pre-loaded one was supplied (e.g. resident service)
+    if roma_model is None:
+        roma_model = setup_model(hparams, device)
 
 
 
@@ -168,7 +193,9 @@ def main(hparams):
 
         # MATCHING WITH REFERENCE FILES
         # ------------------------
-        while matching_state < 2: 
+        while matching_state < 2:
+
+            lat_abort = False  # set if this pass stops early due to a laterality mismatch
 
             for num_matching, (ref_img_path, ref_kpt_path) in enumerate(zip(ref_img_files, ref_kpt_files)):
 
@@ -257,10 +284,13 @@ def main(hparams):
                         os.rmdir(save_path_base) 
 
                     # Break current matching loop to restart with flipped image or stop if already flipped
+                    lat_abort = True
                     matching_state += 1
                     break
 
-            if num_matching == count_ref_used-1:
+            # Finished the intended references without a laterality abort (works
+            # whether the loop hit the count_ref_used cap or ran out of files)
+            if not lat_abort:
                 matching_state = 3 # Finished
 
                 # AGREEMENT CALCULATION
@@ -299,14 +329,14 @@ if __name__ == '__main__':
     parent_parser.add_argument(
         '--reference_path',
         type=str,
-        default=r'path_to_reference_images',
+        default=r'E:\data\UKAKneeX\LATERAL_ALL_References\*',
         help='Path to reference images and landmark files'
     )
 
     parent_parser.add_argument(
         '--reference_rank_file',
         type=str,
-        default=r'path_to_reference_images\reference_ranks.json',
+        default=None,#r'E:\data\UKAKneeX\AXIAL_LEFT\reference_distances_knee_axial_left.json',
         help='Path to reference ranking file (JSON format)'
     )
     
@@ -314,20 +344,20 @@ if __name__ == '__main__':
         '--num_references',
         type=int,
         default=-1,
-        help='Total number of references used for one matching (set to -1 to use all available references)'
+        help='Total number of references used for one matching'
     )
 
     parent_parser.add_argument(
         '--data_path',
         type=str,
-        default=r'path_to_target_images',
+        default=r'E:\data\UKAKneeX\LATERAL_LEFT\*',
         help='Path to target images to be processed'
     )
 
     parent_parser.add_argument(
         '--save_path',
         type=str,
-        default=r'path_to_save_directory',
+        default=r'E:\experiments\MSK_Landmarks_2D\test\test_Knee_LATERAL_Left',
         help='Path where results will be saved'
     )
     

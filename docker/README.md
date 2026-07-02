@@ -1,238 +1,283 @@
-# Roma Medical - Docker Setup Guide (Production Compatible)
+# Roma Medical: Dockerized inference service
 
-This guide will help you run the Roma Medical matching script using Docker with a production-compatible temporary directory workflow that matches your project's architecture.
+Run the morphometry pipeline yourself as a self-hosted service on your own GPU
+machine. The RoMa model loads once and stays in GPU memory, then clients send a
+radiograph with `anatomy` and `projection` (and optional `mpp`) and get back the
+consensus landmarks and clinical measurements. It is reachable two ways: a REST API,
+and a remote MCP server for agents. Both sit behind an HTTPS proxy with API-key auth.
 
-## Overview
+Each request runs three in-process stages, reusing the resident model: preparation
+(`do_preparation.py`), matching (`do_matching.py`), measurement (`do_measurements.py`).
 
-The Roma Medical Docker setup uses a **temporary directory pattern** for production compatibility:
+## Requirements
 
-- ✅ **Production Compatible**: Matches the overarching project's workflow
-- ✅ **GPU/CPU Support**: Automatic detection with graceful fallback
-- ✅ **No Fixed Directories**: Uses temporary directories for isolation
-- ✅ **Flexible Integration**: Easy to integrate into existing systems
-- ✅ **Self-Contained**: All dependencies included in Docker image
+- An NVIDIA GPU (about 24 GB; the model uses ~23 GB at the default resolution), a
+  recent driver, Docker, and the NVIDIA Container Toolkit. CPU works for smoke tests
+  but is slow.
+- The two weight files `roma_outdoor.pth` and `dinov2_vitl14_pretrain.pth` (mounted,
+  not baked into the image).
+- Reference sets (images + landmark CSVs) for each anatomy/projection you enable.
 
-## Prerequisites
+The `Dockerfile` uses CUDA `cu121`; change the base image and torch index if your
+driver needs a different version.
 
-1. **Docker Desktop**
-   - Windows: Download from [docker.com](https://www.docker.com/products/docker-desktop/)
-   - Linux: Follow [official installation guide](https://docs.docker.com/engine/install/)
-   - Restart after installation
+## Data you provide (mounted at runtime)
 
-2. **Python 3.x** (for production integration script)
+Keep everything in one folder, called your data root below:
 
-3. **NVIDIA Docker Support** (Optional, for GPU acceleration)
-   - Install [NVIDIA Container Toolkit](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/install-guide.html)
-   - Requires NVIDIA GPU with recent drivers
-
-4. **Verify Installation**
-   ```bash
-   docker --version
-   nvidia-smi  # Optional: Check GPU status
-   ```
-
-## Quick Start
-
-### Production Usage (Recommended)
-
-Use the Python integration script for production workflows:
-
-```python
-from run_production import RomaMedicalDocker
-
-# Initialize Docker runner
-roma_docker = RomaMedicalDocker("roma_medical:latest")
-
-# Run matching with automatic temporary directories
-results = roma_docker.run_matching(
-    data_path="/path/to/target/images",           # Folder containing images to analyze
-    reference_path="/path/to/reference/files",   # Folder with reference images & landmarks
-    reference_left_path="/path/to/left/ref",     # Base path for left laterality check
-    reference_right_path="/path/to/right/ref",   # Base path for right laterality check
-    output_dir="/path/to/save/results",          # Where to save results permanently
-    max_matching_error=500,
-    image_filetype="jpg"
-)
-
-print(f"Processing completed! Results in: {results['output_directory']}")
+```
+<data-root>/
+├── model_weights/           # roma_outdoor.pth, dinov2_vitl14_pretrain.pth
+├── refs/                    # one subfolder per <anatomy>_<projection>
+└── experiment_config_template.json
 ```
 
-### Development/Testing
+| Host | Container path |
+|------|----------------|
+| `model_weights/` | `/app/ThirdParty/model_weights` |
+| `refs/` | `/refs` |
+| `experiment_config_template.json` | `/app/experiment_config_template.json` |
 
-For development and testing:
+### Reference layout
+
+One folder per `anatomy_projection`. Inside, the `*_image.*` and `*_landmarks.csv`
+pairs may be flat or in per-case subfolders (both are found recursively):
+
+```
+refs/
+├── knee_lateral/
+│   ├── case1/{case1_image.jpg, case1_landmarks.csv}
+│   └── case2/ ...
+└── knee_axial/
+    ├── 0001_image.jpg
+    └── 0001_landmarks.csv
+```
+
+The prefix before `_image` and `_landmarks` must match. All images in a set share
+one extension (jpg or png). References are single-orientation. The folder name must
+match a tag in `experiment_config_template.json`.
+
+## Templates
+
+`experiment_config_template.json` holds one entry per supported `anatomy_projection`
+with its static settings (`mode`, default `mpp`, `num_references`,
+`max_matching_error`, `landmark_scaling`, optional `reference_dir`). The repo ships
+`knee_lateral` and `knee_axial`; any other request returns 400 with the available
+keys. Add combinations by adding entries and their reference sets. If you mount this
+file, editing it needs no rebuild. `GET /health` lists the current `supported` keys.
+
+## Quick start (full stack: HTTPS, auth, MCP)
+
+Build the image once, put your settings in a `service.env` next to `service.sh`,
+then start it.
 
 ```bash
-# Build and run for development/testing
-cd docker
-docker-compose up --build
-```
-
-## Architecture
-
-### Temporary Directory Flow
-```
-Host System:
-  📁 Your Images: /any/path/to/images/
-  📁 Your References: /any/path/to/references/
-  📁 Your Output: /path/to/save/outputs/to
-  
-Docker Execution:
-  📁 Temp Dir: /tmp/xyz123/
-  ├── 📁 input/      (copied from your images)
-  ├── 📁 output/     (results generated here)
-  └── 📁 references/ (copied from your references)
-```
-
-### Key Benefits:
-- **Isolation**: Each execution is completely isolated
-- **Cleanup**: Automatic cleanup of temporary files
-- **Scalability**: Multiple containers can run simultaneously
-- **Production Ready**: Matches existing project patterns
-
-## Parameters
-
-All parameters from `do_matching.py` are supported:
-
-| Parameter | Description | Default |
-|-----------|-------------|---------|
-| `data_path` | Path to target images folder | Required |
-| `reference_path` | Path to reference images and landmarks | Required |
-| `reference_left_path` | Base path for left laterality check | "" (optional) |
-| `reference_right_path` | Base path for right laterality check | "" (optional) |
-| `max_matching_error` | Maximum allowed matching error | 500 |
-| `image_filetype` | Image file extension | "jpg" |
-| `output_dir` | Permanent results directory | None (temporary) |
-
-## GPU vs CPU Performance
-
-The container automatically detects and adapts:
-
-- **🚀 With GPU**: Significantly faster processing (recommended for production)
-- **🐌 Without GPU**: Full functionality, slower processing (fine for development)
-- **🔄 Automatic**: No configuration needed - container adapts automatically
-
-## Build Instructions (Required First Step)
-
-**⚠️ Important**: You must build the Docker image before using it (either from Python or command line).
-
-### Option 1: Using docker-compose (Development)
-```bash
-cd docker
-docker-compose build
-```
-
-### Option 2: Direct build (Production)
-```bash
-# From the main project directory (roma_medical/)
+# 1. build (from the repo root)
 docker build -f docker/Dockerfile -t roma_medical:latest .
+
+# 2. configure: create service.env next to service.sh
+cat > service.env <<'ENV'
+API_KEY=choose-a-long-random-secret   # required on /process, /mcp, /upload
+ROOT=/path/to/your/data-root          # holds model_weights/, refs/, the template
+PUBLIC_IP=your.server.host.or.ip      # used in the TLS cert and printed URLs
+GPUID=0
+ENV
+
+# 3. run
+./service.sh start        # model + MCP + Caddy HTTPS, auto-restart
+./service.sh status
+./service.sh logs
+./service.sh stop
 ```
 
-**After building, the image can be used in multiple ways:**
-- ✅ Python script (via `run_production.py`)
-- ✅ Command line (via `docker run`)
-- ✅ Docker compose (via `docker-compose up`)
+This starts three containers on a private network: the model (localhost only), the
+MCP server (internal), and Caddy, which terminates TLS on `HTTPS_PORT` (443 by
+default) and routes by path. Clients then use these, with the `X-API-Key` header
+(`/health` is open):
 
-## Usage After Building
+```
+https://<PUBLIC_IP>/process    # REST
+https://<PUBLIC_IP>/mcp         # MCP (Streamable HTTP)
+```
 
-## Production Deployment
+Settings (env or `service.env`): `API_KEY`, `ROOT` (or `WEIGHTS_DIR`, `REFS_DIR`,
+`TEMPLATE_FILE`), `PUBLIC_IP`, `GPUID`, `HTTPS_PORT`, `LOCAL_PORT`, `COARSE_RES`,
+`UPSAMPLE_RES`.
 
-### Minimal Host Requirements:
-- Python 3.x environment
-- Docker installed
-- The `run_production.py` script
+### HTTPS certificate
 
-### Deployment Steps:
-1. **Build once:** `docker build -f docker/Dockerfile -t roma_medical:latest .` (from main project directory)
-2. **Deploy anywhere:** Copy image + integration script  
-3. **Execute:** Use from Python scripts, command line, or compose (no rebuild needed)
+`service.sh` generates a self-signed cert (with `PUBLIC_IP` in its SAN) on first
+start, so clients trust it or skip verification (`curl -k`, `verify=False`). For a
+CA-signed cert, put your `cert.pem` and `key.pem` in `<data-root>/caddy/`.
 
-### Example Production Integration:
+## REST service only (no HTTPS or MCP)
+
+To front it with your own proxy, run just the model API:
+
+```bash
+docker run -d --name roma-medical --gpus all -p 8000:8000 --shm-size 8g \
+  -e API_KEY=choose-a-long-random-secret \
+  -v <data-root>/model_weights:/app/ThirdParty/model_weights:ro \
+  -v <data-root>/refs:/refs:ro \
+  -v <data-root>/experiment_config_template.json:/app/experiment_config_template.json:ro \
+  roma_medical:latest
+# http://localhost:8000/process (X-API-Key), /health, docs at /docs
+```
+
+`docker-compose.yml` is the same single service; set `WEIGHTS_DIR`, `REFS_DIR`,
+`TEMPLATE_FILE`, and optionally `API_KEY`.
+
+## Authentication
+
+Set `API_KEY` to require the `X-API-Key` header on `/process`, `/mcp`, and
+`/upload`. Leave it unset only for local use. `/health` stays open and reports
+`auth_required`.
+
+## REST API
+
+Base URL is `https://<PUBLIC_IP>` (full stack) or `http://localhost:8000` (REST only).
+
+```bash
+curl -k https://<PUBLIC_IP>/health
+# {"status":"ok","model_loaded":true,"auth_required":true,"supported":[...]}
+```
+
+`POST /process` (multipart form):
+
+| Field | Required | Description |
+|-------|----------|-------------|
+| `image` | yes | radiograph (jpg/png) |
+| `anatomy` | yes | e.g. `knee` |
+| `projection` | yes | `lateral` or `axial` |
+| `mpp` | no | mm per pixel; overrides the template default |
+| `num_references` | no | references to match (`-1` = all); overrides the default |
+| `max_matching_error` | no | max Procrustes error; overrides the default |
+
+Omitted optional fields use the template default. `num_references=10` runs in about
+15 s; the default matches all references (about 2 min).
+
 ```python
-import logging
-from run_production import RomaMedicalDocker
-
-# Configure logging
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
-
-# Process knee X-rays
-roma_docker = RomaMedicalDocker("roma_medical:latest", logger)
-
-try:
-    results = roma_docker.run_matching(
-        data_path="/production/data/incoming",
-        reference_path="/production/references/knee_lateral",
-        output_dir="/production/results/batch_001"
-    )
-    logger.info(f"Batch processed: {len(results['output_files'])} files")
-except Exception as e:
-    logger.error(f"Processing failed: {e}")
+import requests
+with open('target.jpg', 'rb') as f:
+    r = requests.post('https://<PUBLIC_IP>/process',
+                      headers={'X-API-Key': '<key>'},
+                      files={'image': f},
+                      data={'anatomy': 'knee', 'projection': 'lateral', 'num_references': 10},
+                      verify=False)   # self-signed cert
+r.raise_for_status()
+print(r.json()['measurements'])
 ```
 
-## Understanding Output
+Response:
 
-Results include:
-- **📊 Individual Matches**: Visualization for each reference-to-target pair
-- **📍 Landmark Coordinates**: CSV files with precise keypoint positions  
-- **📈 Matching Metrics**: JSON files with confidence and error data
-- **🎯 Consensus Results**: Bulk analysis showing agreement across references
+```json
+{
+  "anatomy": "knee", "projection": "lateral", "mpp": 0.148,
+  "landmarks": [[x, y]],
+  "measurements": {"<name>": 0.0},
+  "matching": {"num_references_used": 10, "mean_confidence": 0.9}
+}
+```
 
-## Troubleshooting
+A ready client is in [`client_example.py`](client_example.py):
 
-### Common Issues
-
-**"Docker not found"**
-- Ensure Docker Desktop is installed and running
-- Restart computer after installation
-
-**"Permission denied"**
-- Run terminal/command prompt as Administrator
-- Ensure Docker Desktop is running
-
-**"Out of space"**
-- Clean old Docker images: `docker system prune`
-- Free up disk space
-
-**"Container exits immediately"**
-- Check logs: `docker-compose logs`
-- Verify image and reference paths exist
-
-**"GPU not detected"**
-- Install NVIDIA Container Toolkit
-- Verify with `nvidia-smi`
-- Container will automatically fall back to CPU
-
-### Debug Mode
-
-For debugging:
 ```bash
-# Interactive container access
-docker-compose run roma_medical bash
-
-# Check GPU detection
-docker run --rm --runtime=nvidia --gpus all roma_medical:latest python -c "import torch; print(torch.cuda.is_available())"
+python docker/client_example.py --url https://<PUBLIC_IP> --api-key <key> \
+  --image target.jpg --anatomy knee --projection lateral
 ```
 
-## Advanced Usage
+## MCP server (for agents)
 
-### Custom Docker Command
-```bash
-# Manual Docker execution with custom mount
-docker run --rm --runtime=nvidia --gpus all \
-  -v "/path/to/data:/app/mnt:rw" \
-  roma_medical:latest \
-  python do_matching.py --max_matching_error 300
+A remote MCP server (Streamable HTTP) lets an agent call morphometry as a tool. It
+returns a structured `status`, so the agent can tell why a call failed without extra
+tools.
+
+Point your MCP client at `https://<PUBLIC_IP>/mcp` with the `X-API-Key` header:
+
+```json
+{
+  "mcpServers": {
+    "roma-morphometry": {
+      "url": "https://<PUBLIC_IP>/mcp",
+      "headers": { "X-API-Key": "<key>" }
+    }
+  }
+}
 ```
 
-### Integration with Existing Systems
-The `run_production.py` script is designed to integrate seamlessly with existing workflows that use temporary directory patterns, making it compatible with other AI processing pipelines in your project.
+For the self-signed cert, trust it or disable verification (code clients: an httpx
+factory with `verify=False`, shown below).
 
-## Support
+Images go in two steps, so pixel data stays out of the agent's context:
 
-For issues:
-1. Check logs: `docker-compose logs`
-2. Verify file paths and permissions
-3. Test with `docker --version` and `nvidia-smi`
-4. Review container output for specific error messages
+1. `POST https://<PUBLIC_IP>/upload` with the raw file bytes and the `X-API-Key`
+   header returns `{"image_token": "<token>", "bytes": N}` (single use, 10 min).
+2. Pass that token to the tool.
 
-The Docker setup is designed to be production-ready while maintaining ease of use for development and testing.
+Tools:
+
+- `get_morphometry(anatomy, projection, image_token, mpp?, num_references?)`.
+  `image_token` (from `/upload`) is the only image input. It returns a dict with a
+  `status` field:
+
+  | `status` | meaning | also includes |
+  |----------|---------|---------------|
+  | `ok` | success | `measurements`, `landmarks`, `matching` |
+  | `unsupported` | anatomy/projection not enabled | `supported`, `detail` |
+  | `no_match` | no consensus (often wrong laterality/anatomy) | `detail` |
+  | `unavailable` | service unreachable or not loaded | `detail` |
+  | `bad_input` | bad or expired token, or bad arguments | `detail` |
+  | `error` | unexpected | `detail` |
+
+  The agent branches on `status`; no separate diagnostic tools are needed.
+- `morphometry_health()` returns `{status, supported: [...]}`.
+
+Full example (needs `mcp`, `httpx`, `requests`):
+
+```python
+import asyncio, json, requests, httpx, urllib3
+from mcp import ClientSession
+from mcp.client.streamable_http import streamablehttp_client
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+
+BASE, KEY = "https://<PUBLIC_IP>", "<key>"
+
+def _factory(headers=None, timeout=None, auth=None):        # self-signed cert
+    return httpx.AsyncClient(headers=headers, timeout=timeout, auth=auth, verify=False)
+
+def upload(path):
+    r = requests.post(f"{BASE}/upload", headers={"X-API-Key": KEY},
+                      data=open(path, "rb").read(), verify=False)
+    r.raise_for_status()
+    return r.json()["image_token"]
+
+async def measure(path, anatomy, projection):
+    token = upload(path)                                     # step 1
+    async with streamablehttp_client(f"{BASE}/mcp", headers={"X-API-Key": KEY},
+                                     httpx_client_factory=_factory) as (r, w, _):
+        async with ClientSession(r, w) as s:                # step 2
+            await s.initialize()
+            res = await s.call_tool("get_morphometry",
+                {"anatomy": anatomy, "projection": projection, "image_token": token})
+            return json.loads(res.content[0].text)
+
+print(asyncio.run(measure("target.jpg", "knee", "lateral")))
+```
+
+You can hand this section to a coding agent to wire the tool into your framework.
+
+## Notes
+
+- One GPU per container. Inference is serialized. For several GPUs, run one stack per
+  GPU (set `GPUID` and distinct ports/names).
+- Uploads are re-encoded to the reference set's image extension; lossless for
+  grayscale radiographs.
+- A `422` from `/process` means no consensus, usually a laterality or anatomy
+  mismatch with the reference set.
+- The image installs a curated dependency set (`requirements-docker.txt`), not the
+  full dev `requirements.txt`.
+- `do_preparation.py` is also a standalone CLI (and the hook for future DICOM support):
+  ```bash
+  python do_preparation.py --anatomy knee --projection lateral --mpp 0.148 \
+    --image target.jpg --references_root /path/to/refs --job_dir ./job1
+  ```

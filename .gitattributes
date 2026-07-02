@@ -1,0 +1,4 @@
+# Files that run inside Linux containers / on the server must stay LF,
+# regardless of the developer's OS (a CRLF shell script breaks in bash).
+*.sh        text eol=lf
+Dockerfile  text eol=lf

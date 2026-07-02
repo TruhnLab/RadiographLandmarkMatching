@@ -13,6 +13,14 @@ from utils.utils import read_csv, load_config
 from measurements.measurements import get_function_dict
 
 
+def _long_path(path):
+    """Prefix Windows paths to enable extended-length (>260 char) support.
+    On non-Windows platforms the path is returned unchanged."""
+    if os.name == 'nt':
+        return r"\\?\\" + os.path.abspath(path)
+    return path
+
+
 
 
 def main(hparams):
@@ -26,7 +34,8 @@ def main(hparams):
     # DATA DEFINITIONS
     # ------------------------
 
-    # Get configurations
+    # Get configurations (mode + mpp come from the selected config tag; for the
+    # service this is a per-job config written by do_preparation.py)
     config = load_config(hparams.config_tag, config_path=hparams.config_path)
     function_dict, _ = get_function_dict(mode=config['mode'])
     function_names = [key for key in function_dict.keys()]
@@ -50,7 +59,7 @@ def main(hparams):
         new_measure = [id_target,]
 
         # Load data
-        kpt_data = read_csv(r"\\?\\"+kpt_path)
+        kpt_data = read_csv(_long_path(kpt_path))
         kpt_data = np.array([[float(y)*config['mpp'],float(x)*config['mpp']] for x,y in kpt_data])
 
         # calculate measures
@@ -81,28 +90,28 @@ if __name__ == '__main__':
     parent_parser.add_argument(
         '--data_path',
         type=str,
-        default=r'path_to_matchings'
+        default=r'E:\experiments\MSK_Landmarks_2D\ROMA_EmoryKneeX_LATERAL_PAIRS'
     )
 
     parent_parser.add_argument(
         '--save_path',
         type=str,
-        default=r'path_to_save_measurements'
+        default=r'E:\experiments\MSK_Landmarks_2D\ROMA_EmoryKneeX_LATERAL_PAIRS'
     )
 
     parent_parser.add_argument(
         '--config_path',
         type=str,
-        default=r'experiment_config_windows.json'
+        default=r'C:\Users\deschweiler\Documents\KneeMRI_PatellofemoralMeasurements\roma_medical\experiment_config_windows.json'
     )
 
     parent_parser.add_argument(
         '--config_tag',
         type=str,
-        default='knee_lateral'
+        default='knee_lateral_100ref'
     )
 
-    
+
     hyperparams = parent_parser.parse_args()
 
     # ---------------------

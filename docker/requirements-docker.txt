@@ -1,0 +1,26 @@
+# Curated runtime dependencies for the Roma Medical inference service.
+# torch / torchvision are installed separately in the Dockerfile (CUDA index).
+#
+# This is intentionally minimal: only what do_matching.py, do_measurements.py
+# and the RoMa matching stack actually import on the inference path. The full
+# dev environment (requirements.txt, ~200 packages incl. napari/PyQt/dash) is
+# NOT needed to run the pipeline.
+
+numpy==1.24.4
+scipy==1.13.1
+scikit-image==0.24.0
+opencv-python-headless==4.10.0.84
+pillow==11.1.0
+matplotlib==3.8.2
+pandas==2.2.3
+tqdm==4.67.0
+einops==0.8.0
+kornia==0.7.4
+
+# Service
+fastapi==0.115.6
+uvicorn[standard]==0.34.0
+python-multipart==0.0.20
+
+# MCP server (Streamable HTTP wrapper around the morphometry API); pulls httpx
+mcp==1.28.1

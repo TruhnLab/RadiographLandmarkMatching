@@ -1,0 +1,40 @@
+# Roma Medical inference service.
+#
+#   Build:  docker compose -f docker/docker-compose.yml build
+#   Run:    docker compose -f docker/docker-compose.yml up -d
+#   Logs:   docker compose -f docker/docker-compose.yml logs -f
+#   Stop:   docker compose -f docker/docker-compose.yml down
+#
+# Set the two host paths below (or via a .env file next to this compose file):
+#   WEIGHTS_DIR  -> folder containing roma_outdoor.pth + dinov2_vitl14_pretrain.pth
+#   REFS_DIR     -> folder containing one subfolder per anatomy_projection
+#                   (e.g. knee_lateral/, feet_ap/) with *_image.* + *_landmarks.csv
+
+services:
+  roma-medical:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    image: roma_medical:latest
+    container_name: roma-medical
+    restart: unless-stopped
+    environment:
+      # Set API_KEY (env or .env) to require an "X-API-Key" header on /process.
+      # Leave empty to disable auth (local/trusted use only).
+      - API_KEY=${API_KEY:-}
+    ports:
+      - "8000:8000"
+    volumes:
+      - "${WEIGHTS_DIR:?set WEIGHTS_DIR to your model_weights folder}:/app/ThirdParty/model_weights:ro"
+      - "${REFS_DIR:?set REFS_DIR to your references root folder}:/refs:ro"
+      # Mount the template so per-anatomy defaults are editable without a rebuild.
+      # Defaults to the in-repo copy; override TEMPLATE_FILE to point elsewhere.
+      - "${TEMPLATE_FILE:-../experiment_config_template.json}:/app/experiment_config_template.json:ro"
+    shm_size: "8gb"
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]

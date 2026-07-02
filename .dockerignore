@@ -1,0 +1,22 @@
+# Build context is the project root, which contains large notebooks, data and
+# the 1.6 GB model weights. Ignore everything, then re-include only what the
+# image actually needs (weights and references are mounted at runtime).
+
+*
+
+!ThirdParty
+!utils
+!measurements
+!experiment_config_template.json
+!do_preparation.py
+!do_matching.py
+!do_measurements.py
+!docker
+
+# Re-exclude heavy / generated content inside the re-included folders
+ThirdParty/model_weights
+**/__pycache__
+**/*.pyc
+ThirdParty/romatch.egg-info
+docker/docker-compose.yml
+docker/README.md

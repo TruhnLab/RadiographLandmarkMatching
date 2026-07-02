@@ -1,52 +1,50 @@
-# Use CUDA base image for GPU support with CPU fallback capability
-FROM nvidia/cuda:12.4.0-runtime-ubuntu22.04
+# Roma Medical - resident inference service image.
+# Build from the PROJECT ROOT:  docker build -f docker/Dockerfile -t roma_medical:latest .
 
-# Set working directory inside the container
-WORKDIR /app
+FROM nvidia/cuda:12.1.1-runtime-ubuntu22.04
 
-# Install Python and system dependencies
-RUN apt-get update && apt-get install -y \
+ENV DEBIAN_FRONTEND=noninteractive
+
+# Python + a couple of shared libs opencv/matplotlib expect at runtime
+RUN apt-get update && apt-get install -y --no-install-recommends \
     python3 \
     python3-pip \
+    libglib2.0-0 \
     && rm -rf /var/lib/apt/lists/*
 
-RUN pip3 install --upgrade pip
+RUN ln -sf /usr/bin/python3 /usr/bin/python && pip3 install --no-cache-dir --upgrade pip
 
-# Install core dependencies with explicit versions 
-RUN pip3 install "numpy==1.24.3"
-RUN pip3 install "scikit-image==0.21.0"
-RUN pip3 install "matplotlib==3.7.2"
-RUN pip3 install "opencv-python==4.8.0.76"
+WORKDIR /app
 
-# Install PyTorch with CUDA support if available, fallback to CPU-only version
-RUN pip3 install --no-cache-dir torch==2.1.0 torchvision==0.16.0 --index-url https://download.pytorch.org/whl/cu124 || \
-    pip3 install --no-cache-dir torch==2.1.0 torchvision==0.16.0 --index-url https://download.pytorch.org/whl/cpu
+# PyTorch with CUDA 12.1 wheels (bundles its own CUDA runtime libraries).
+# cu121 stays safely under the host driver's CUDA 12.2 ceiling.
+RUN pip3 install --no-cache-dir torch==2.5.1 torchvision==0.20.1 \
+    --index-url https://download.pytorch.org/whl/cu121
 
-# Install remaining dependencies
-RUN pip3 install "pillow==10.0.0" "pathlib" "argparse"
+# Curated runtime dependencies (cached separately from the source copy)
+COPY docker/requirements-docker.txt /app/requirements-docker.txt
+RUN pip3 install --no-cache-dir -r /app/requirements-docker.txt
 
-# Create directory for data storage
-RUN mkdir -p /app/mnt
-
-# Copy necessary files and directories
-COPY ./ThirdParty /app/ThirdParty
-COPY ./utils /app/utils
-COPY ./measurements /app/measurements
-COPY ./experiment_config_windows.json /app
-COPY ./do_matching.py /app
-COPY ./do_measurements.py /app
-
-# Set environment variables (compatible with production system)
-ENV PYTHONPATH="/app:/app/ThirdParty"
-ENV MPLBACKEND=Agg
-ENV MKL_SERVICE_FORCE_INTEL=1
-
-# Create entrypoint script
-COPY docker/entrypoint.sh /app/
+# Application code. Model weights are NOT copied here: they are mounted at
+# runtime into /app/ThirdParty/model_weights (see docker-compose.yml).
+COPY ThirdParty /app/ThirdParty
+COPY utils /app/utils
+COPY measurements /app/measurements
+COPY experiment_config_template.json /app/
+COPY do_preparation.py /app/
+COPY do_matching.py /app/
+COPY do_measurements.py /app/
+COPY docker/serve.py /app/serve.py
+COPY docker/mcp_server.py /app/mcp_server.py
+COPY docker/entrypoint.sh /app/entrypoint.sh
 RUN chmod +x /app/entrypoint.sh
 
-# Set permissions (compatible with production workflow)
-RUN chown -R root:root /app && chmod -R 775 /app
+ENV PYTHONPATH="/app:/app/ThirdParty" \
+    PYTHONUNBUFFERED=1 \
+    MPLBACKEND=Agg \
+    MKL_SERVICE_FORCE_INTEL=1 \
+    REFERENCES_ROOT=/refs \
+    TEMPLATE_PATH=/app/experiment_config_template.json
 
-# Use entrypoint for production compatibility
+EXPOSE 8000
 ENTRYPOINT ["/app/entrypoint.sh"]
