@@ -25,6 +25,7 @@ sys.path.append('./ThirdParty')
 import os
 import json
 import glob
+import base64
 import logging
 import tempfile
 import threading
@@ -89,7 +90,8 @@ def _supported_keys():
     for k in sorted(keys):
         ref_dir = os.path.join(REFERENCES_ROOT, template[k].get('reference_dir', k))
         has_refs = bool(glob.glob(os.path.join(ref_dir, '**', '*_image.*'), recursive=True))
-        available.append({'key': k, 'references_present': has_refs})
+        available.append({'key': k, 'references_present': has_refs,
+                          'mode': template[k].get('mode', k)})
     return available
 
 
@@ -107,8 +109,15 @@ def health():
     }
 
 
-def _run_pipeline(image_bytes, anatomy, projection, mpp, num_references, max_matching_error):
-    """Run preparation + matching + measurement for one image."""
+def _run_pipeline(image_bytes, anatomy, projection, mpp, num_references, max_matching_error,
+                  return_image=False):
+    """Run preparation + matching + measurement for one image.
+
+    If ``return_image`` is set, the response also carries the *processed* image
+    (base64), i.e. the one on disk after matching. do_matching flips the target
+    horizontally when it corrects laterality, so this image and the returned
+    landmarks are always in the same frame (needed for measurement overlays).
+    """
     with tempfile.TemporaryDirectory() as job_dir:
 
         # --- Preparation: template lookup, reference resolution, preprocessing,
@@ -162,6 +171,13 @@ def _run_pipeline(image_bytes, anatomy, projection, mpp, num_references, max_mat
             )
         landmarks = [[float(x), float(y)] for x, y in read_csv(bulk_csv)]
 
+        # Processed target image (flipped in-place by do_matching if laterality was
+        # corrected), so it stays consistent with the landmarks above.
+        processed_image_b64 = None
+        if return_image:
+            with open(job['image_path'], 'rb') as f:
+                processed_image_b64 = base64.b64encode(f.read()).decode()
+
         # Per-reference Procrustes errors (matching confidence signal)
         procrustes = None
         procrustes_json = os.path.join(job['output_dir'], f'{target_id}_matches_bulk_procrustes.json')
@@ -190,7 +206,7 @@ def _run_pipeline(image_bytes, anatomy, projection, mpp, num_references, max_mat
         max_err = cfg['max_matching_error']
         confidence = float(1 - np.clip(mean_err, 0, max_err) / max_err)
 
-    return {
+    result = {
         'anatomy': anatomy,
         'projection': projection,
         'config_tag': cfg['mode'],
@@ -203,6 +219,9 @@ def _run_pipeline(image_bytes, anatomy, projection, mpp, num_references, max_mat
             'procrustes_errors': procrustes,
         },
     }
+    if processed_image_b64 is not None:
+        result['image_b64'] = processed_image_b64
+    return result
 
 
 @app.post('/process')
@@ -213,6 +232,7 @@ def process(
     mpp: float = Form(None, description='Millimeters per pixel (default: template)'),
     num_references: int = Form(None, description='References to match against, -1 = all (default: template)'),
     max_matching_error: int = Form(None, description='Max allowed Procrustes error (default: template)'),
+    return_image: bool = Form(False, description='If true, also return the processed image (base64) for overlays'),
     x_api_key: str = Header(None, description='API key, required when the service has one configured'),
 ):
     if API_KEY and x_api_key != API_KEY:
@@ -225,4 +245,5 @@ def process(
     logger.info('Processing %s | %s/%s | mpp=%s num_references=%s max_matching_error=%s',
                 image.filename, anatomy, projection, mpp, num_references, max_matching_error)
     with MODEL_LOCK:
-        return _run_pipeline(image_bytes, anatomy, projection, mpp, num_references, max_matching_error)
+        return _run_pipeline(image_bytes, anatomy, projection, mpp, num_references,
+                             max_matching_error, return_image=return_image)

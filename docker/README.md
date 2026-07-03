@@ -222,7 +222,7 @@ Tools:
 
   | `status` | meaning | also includes |
   |----------|---------|---------------|
-  | `ok` | success | `measurements`, `landmarks`, `matching` |
+  | `ok` | success | `measurements`, `landmarks`, `matching`, `result_token`, `visualizable_measurements` |
   | `unsupported` | anatomy/projection not enabled | `supported`, `detail` |
   | `no_match` | no consensus (often wrong laterality/anatomy) | `detail` |
   | `unavailable` | service unreachable or not loaded | `detail` |
@@ -230,7 +230,16 @@ Tools:
   | `error` | unexpected | `detail` |
 
   The agent branches on `status`; no separate diagnostic tools are needed.
-- `morphometry_health()` returns `{status, supported: [...]}`.
+- `visualize_measurement(result_token, measurement)` returns the radiograph with
+  one measurement's construction (points and lines) drawn on it, as an image. Use
+  the `result_token` from a successful `get_morphometry` and a name from its
+  `visualizable_measurements`; the token works for multiple measurements until it
+  expires. Overlays are drawn on the processed image, so they stay aligned even
+  when laterality was corrected. (The client must be able to render image results.)
+- `morphometry_health()` returns `{status, supported: [...]}`, where each entry is
+  `{anatomy, projection, measurements: [...]}`. It does no GPU work, so an agent can
+  call it up front to learn every supported anatomy/projection pair and the exact
+  measurement names each yields (the same names `visualize_measurement` accepts).
 
 Full example (needs `mcp`, `httpx`, `requests`):
 

@@ -1,9 +1,15 @@
 import numpy as np
 import matplotlib.pyplot as plt
+import matplotlib.patheffects as pe
 from scipy.spatial.distance import cdist
 
-POINT_COLOR = 'red'
-LINE_COLOR = 'green'
+# Overlay palette. Amber points and a cyan construction line read clearly on
+# grayscale radiographs and stay distinguishable under colour-vision deficiency
+# (unlike the classic red/green pair). A dark halo behind every mark keeps them
+# legible over bright bone as well as dark soft tissue.
+POINT_COLOR = '#F5A11E'   # amber  - landmark points
+LINE_COLOR = '#22C3DD'    # cyan   - construction lines
+_HALO_COLOR = '#10151C'   # near-black halo drawn behind marks for legibility
 
 # %%
 # GENERAL FUNCTION DEFINITIONS
@@ -65,25 +71,264 @@ def best_fit_line_from_landmarks(landmarks_subset):
 
 
 
-def plot_image(image, lines, title='', linewidth=5):
+# ---------------------------------------------------------------------
+# Measurement-type indication (angle / distance / ratio)
+#
+# The overlay only shows landmarks and construction lines, so the *nature* of a
+# measurement is otherwise invisible. Each type gets a small, self-verifying cue:
+#   angle    -> an arc at the vertex (drawn only when it truly equals the value)
+#   distance -> perpendicular end ticks on the dimension segment(s)
+#   ratio    -> the two arms labelled a / b (numerator identified from the value)
+# plus a unit on the value and a one-word tag in the badge.
+# ---------------------------------------------------------------------
 
-    fig, ax = plt.subplots(figsize=[10,10])
-    plt.imshow(image, cmap='gray')
+def measurement_kind(name):
+    """Classify a measurement as 'angle', 'distance', 'ratio', or None by name."""
+    n = (name or '').lower()
+    if any(k in n for k in ('angle', 'slope', 'tilt')):
+        return 'angle'
+    if any(k in n for k in ('ratio', 'index')):
+        return 'ratio'
+    if any(k in n for k in ('width', 'height', 'length', 'distance',
+                            'interval', 'position', 'dimension', 'space')):
+        return 'distance'
+    return None
 
-    #1 dots
-    for num_landmark, landmark in enumerate(lines[0]):
-        ax.scatter(landmark[1], landmark[0], color=lines[3][num_landmark], alpha=0.3, s=50)
-        
-    #2 solid line
-    for num_solid, solid_line in enumerate(lines[1]):
-        ax.plot([solid_line[0][1], solid_line[1][1]], [solid_line[0][0], solid_line[1][0]], '-', linewidth=linewidth, color=lines[4][num_solid])
 
-    #3 dotted line
-    for num_dotted, dotted_line in enumerate(lines[2]):
-        ax.plot([dotted_line[0][1], dotted_line[1][1]], [dotted_line[0][0], dotted_line[1][0]], ':', linewidth=linewidth, color=lines[5][num_dotted])
+def _format_value(value, kind, ratio_ab=False):
+    """Value string with a type-appropriate unit for the badge."""
+    if value is None:
+        return ''
+    if kind == 'angle':
+        return f'{value:.1f}°'
+    if kind == 'distance':
+        return f'{value:.1f} mm'
+    if kind == 'ratio':
+        return f'{value:.2f}' + ('   (a / b)' if ratio_ab else '')
+    return f'{value:.3f}'
 
-    plt.title(title)
-    plt.axis('off')
+
+# All points below are in image order [row, col] = [y, x]; matplotlib is fed (x, y).
+def _p(pt):
+    return np.asarray(pt, dtype=float)
+
+def _seg_len(seg):
+    return float(np.linalg.norm(_p(seg[1]) - _p(seg[0])))
+
+def _mid(seg):
+    return (_p(seg[0]) + _p(seg[1])) / 2.0
+
+def _unit(vec):
+    n = float(np.linalg.norm(vec))
+    return None if n < 1e-9 else np.asarray(vec, float) / n
+
+def _angle_between(u, v):
+    c = np.clip(np.dot(u, v) / (np.linalg.norm(u) * np.linalg.norm(v)), -1.0, 1.0)
+    return float(np.degrees(np.arccos(c)))
+
+def _line_intersection(a0, a1, b0, b1):
+    """Intersection of the infinite lines a0a1 and b0b1, as [y, x] (None if parallel)."""
+    (y1, x1), (y2, x2) = _p(a0), _p(a1)
+    (y3, x3), (y4, x4) = _p(b0), _p(b1)
+    den = (x1 - x2) * (y3 - y4) - (y1 - y2) * (x3 - x4)
+    if abs(den) < 1e-9:
+        return None
+    t = ((x1 - x3) * (y3 - y4) - (y1 - y3) * (x3 - x4)) / den
+    return np.array([y1 + t * (y2 - y1), x1 + t * (x2 - x1)])
+
+def _arc_xy(vertex, pa, pb, r, n=60):
+    """Sample the minor arc of radius r at ``vertex`` spanning toward pa and pb."""
+    ta = np.arctan2(pa[0] - vertex[0], pa[1] - vertex[1])
+    tb = np.arctan2(pb[0] - vertex[0], pb[1] - vertex[1])
+    d = (tb - ta + np.pi) % (2 * np.pi) - np.pi
+    ts = ta + np.linspace(0, d, n)
+    return vertex[1] + r * np.cos(ts), vertex[0] + r * np.sin(ts)
+
+
+def _common_vertex(segs, tol=1e-6):
+    """A point shared by every segment (the apex of a fan of rays), or None."""
+    for c in (segs[0][0], segs[0][1]):
+        if all(any(np.allclose(c, p, atol=tol) for p in s) for s in segs):
+            return c
+    return None
+
+
+def _draw_angle_cue(ax, solids, value, halo, img_shape):
+    """Draw an arc for the measured angle, but only when it matches ``value``.
+
+    Handles three cases: two rays meeting at a vertex (e.g. Sulcus), a fan of
+    rays where the value is the angle between one ray and the bisector of two
+    others (e.g. Congruence), and two independent lines whose intersection lies
+    inside the image (Cobb-style). Derived angles (e.g. slopes reported as
+    ``90 - angle``) match none of these and are left without an arc.
+    """
+    if value is None or len(solids) < 2:
+        return
+    segs = [[_p(s[0]), _p(s[1])] for s in solids]
+    av = abs(value)
+    H, W = img_shape[:2]
+
+    def draw(v, ua, ub, guide=()):
+        L = float(np.clip(0.32 * min(_seg_len(s) for s in segs), 24, 110))
+        for u in guide:                                 # dotted guide rays for implied lines
+            tip = v + u * L
+            ax.plot([v[1], tip[1]], [v[0], tip[0]], linestyle=(0, (1, 2.2)), linewidth=2,
+                    color=LINE_COLOR, dash_capstyle='round', path_effects=halo,
+                    zorder=2, clip_on=True)
+        xs, ys = _arc_xy(v, v + ua * L, v + ub * L, 0.72 * L)
+        ax.plot(xs, ys, '-', linewidth=2.5, color=POINT_COLOR, solid_capstyle='round',
+                path_effects=halo, zorder=5, clip_on=True)
+
+    vtx = _common_vertex(segs)
+    if vtx is not None:                                 # a fan of rays from one apex
+        rays = [_unit((s[1] if np.allclose(s[0], vtx) else s[0]) - vtx) for s in segs]
+        rays = [r for r in rays if r is not None]
+        for i in range(len(rays)):                      # a direct pair of rays (e.g. Sulcus)
+            for j in range(i + 1, len(rays)):
+                if abs(_angle_between(rays[i], rays[j]) - av) <= 2.0:
+                    draw(vtx, rays[i], rays[j])
+                    return
+        for k in range(len(rays)):                      # a ray vs the bisector of two others (e.g. Congruence)
+            others = [rays[m] for m in range(len(rays)) if m != k]
+            if len(others) != 2:
+                continue
+            for bis in (_unit(others[0] + others[1]), _unit(-(others[0] + others[1]))):
+                if bis is not None and abs(_angle_between(bis, rays[k]) - av) <= 2.0:
+                    draw(vtx, bis, rays[k], guide=(bis,))
+                    return
+        return
+
+    if len(segs) != 2:                                  # Cobb-style: two independent lines
+        return
+    v = _line_intersection(segs[0][0], segs[0][1], segs[1][0], segs[1][1])
+    if v is None or not (0 <= v[1] <= W and 0 <= v[0] <= H):
+        return                                          # parallel, or crosses off-image -> no arc
+    u0, u1 = _unit(_mid(segs[0]) - v), _unit(_mid(segs[1]) - v)
+    if u0 is None or u1 is None:
+        return
+    ang = _angle_between(u0, u1)
+    if abs((180 - ang) - av) < abs(ang - av):           # the other vertical angle
+        u1, ang = -u1, 180 - ang
+    if abs(ang - av) > 3.0:                             # derived value (e.g. slope): no arc
+        return
+    draw(v, u0, u1, guide=(u0, u1))
+
+
+def _draw_distance_ticks(ax, solids, halo):
+    """Perpendicular end ticks on a single dimension segment (skip busy bundles)."""
+    if not 1 <= len(solids) <= 2:
+        return
+    for seg in solids:
+        p0, p1 = _p(seg[0]), _p(seg[1])
+        d = np.array([p1[1] - p0[1], p1[0] - p0[0]])     # (dx, dy)
+        L = np.hypot(*d)
+        if L < 1e-6:
+            continue
+        perp = np.array([-d[1], d[0]]) / L * 12.0
+        for p in (p0, p1):
+            ax.plot([p[1] - perp[0], p[1] + perp[0]], [p[0] - perp[1], p[0] + perp[1]],
+                    '-', linewidth=2.5, color=POINT_COLOR, solid_capstyle='round',
+                    path_effects=halo, zorder=5)
+
+
+def _draw_ratio_labels(ax, solids, value):
+    """Label the two arms a / b, identifying the numerator from ``value``. Returns True if done."""
+    if len(solids) != 2 or value is None:
+        return False
+    l0, l1 = _seg_len(solids[0]), _seg_len(solids[1])
+    if l0 < 1e-6 or l1 < 1e-6:
+        return False
+    if abs(l0 / l1 - value) > abs(l1 / l0 - value) + 1e-6:
+        num, den = solids[1], solids[0]
+    else:
+        num, den = solids[0], solids[1]
+    if abs(_seg_len(num) / _seg_len(den) - value) > 0.05 * max(value, 1e-6):
+        return False                                     # arms are not the two compared lengths
+    for seg, lab in ((num, 'a'), (den, 'b')):
+        m = _mid(seg)
+        d = np.array([seg[1][1] - seg[0][1], seg[1][0] - seg[0][0]])
+        L = np.hypot(*d)
+        perp = (np.array([-d[1], d[0]]) / L * 22.0) if L > 1e-6 else np.array([22.0, 0.0])
+        ax.text(m[1] + perp[0], m[0] + perp[1], lab, color='white', fontsize=15,
+                fontweight='bold', ha='center', va='center', zorder=6, clip_on=True,
+                path_effects=[pe.withStroke(linewidth=2, foreground=_HALO_COLOR)])
+    return True
+
+
+def plot_image(image, lines, title='', linewidth=3, label=None,
+               name=None, value=None, kind=None):
+    """Draw a measurement's construction (points and lines) over a radiograph.
+
+    ``lines`` is the 6-tuple returned by the ``vis_*`` functions:
+    ``[points, solid_lines, dotted_lines, point_colors, solid_colors, dotted_colors]``.
+
+    Pass ``name`` and ``value`` to get a self-describing badge (name, unit-formatted
+    value, and a type tag) plus a type-specific geometry cue: an arc for angles,
+    end ticks for distances, and a / b arm labels for ratios. ``kind`` is inferred
+    from ``name`` when not given. If only ``label``/``title`` is passed, the text is
+    embedded verbatim with no cue (backward compatible).
+    """
+    if kind is None and name is not None:
+        kind = measurement_kind(name)
+
+    fig, ax = plt.subplots(figsize=(9, 9))
+    ax.imshow(image, cmap='gray')
+    ax.set_axis_off()
+    ax.autoscale(False)   # freeze the view to the image so cues never expand it off-frame
+
+    # Colour by role, not by whatever each vis_* function hard-coded: landmark
+    # points are always POINT_COLOR and every construction line LINE_COLOR, so the
+    # scheme is consistent across all measurements. The per-element colour lists
+    # (lines[3:6]) are ignored on purpose; no measurement uses them to distinguish
+    # meaningful sub-groups.
+
+    # Dark halo drawn behind each stroke so marks stay visible on bright bone.
+    line_halo = [pe.Stroke(linewidth=linewidth + 3, foreground=_HALO_COLOR, alpha=0.55),
+                 pe.Normal()]
+
+    # Solid construction lines (rounded caps, anti-aliased).
+    for line in lines[1]:
+        ax.plot([line[0][1], line[1][1]], [line[0][0], line[1][0]],
+                '-', linewidth=linewidth, color=LINE_COLOR, solid_capstyle='round',
+                path_effects=line_halo, zorder=3)
+
+    # Dotted / auxiliary lines (fine rounded dots read cleaner than matplotlib ':').
+    for line in lines[2]:
+        ax.plot([line[0][1], line[1][1]], [line[0][0], line[1][0]],
+                linestyle=(0, (1, 2.2)), linewidth=linewidth, color=LINE_COLOR,
+                dash_capstyle='round', path_effects=line_halo, zorder=3)
+
+    # Type-specific cue that shows *what* is being measured.
+    ratio_ab = False
+    if kind == 'angle':
+        _draw_angle_cue(ax, lines[1], value, line_halo, np.shape(image))
+    elif kind == 'distance':
+        _draw_distance_ticks(ax, lines[1], line_halo)
+    elif kind == 'ratio':
+        ratio_ab = _draw_ratio_labels(ax, lines[1], value)
+
+    # Landmark points: filled marker with a white edge and a soft dark halo.
+    marker_size = (4 + 2.2 * linewidth) ** 2
+    for point in lines[0]:
+        sc = ax.scatter(point[1], point[0], s=marker_size, color=POINT_COLOR,
+                        edgecolors='white', linewidths=1.3, zorder=4)
+        sc.set_path_effects([pe.withStroke(linewidth=2.5, foreground=_HALO_COLOR, alpha=0.5)])
+
+    # Measurement badge embedded in the image (replaces the plot title). The unit
+    # on the value already conveys the type, so no separate type tag is shown.
+    if name is not None:
+        vstr = _format_value(value, kind, ratio_ab)
+        text = f'{name}\n{vstr}' if vstr else name
+    else:
+        text = label if label is not None else title
+    if text:
+        ax.text(0.028, 0.972, text, transform=ax.transAxes, va='top', ha='left',
+                fontsize=15, fontweight='bold', color='white', zorder=6, linespacing=1.5,
+                path_effects=[pe.withStroke(linewidth=2, foreground=_HALO_COLOR)],
+                bbox=dict(boxstyle='round,pad=0.5', linewidth=1.4,
+                          facecolor=(0.04, 0.06, 0.09, 0.72), edgecolor=LINE_COLOR))
+
+    fig.subplots_adjust(left=0, right=1, top=1, bottom=0)
 
 
 
