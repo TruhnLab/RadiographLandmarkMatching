@@ -18,4 +18,20 @@ $(document).ready(function() {
 	
     bulmaSlider.attach();
 
+    // Expand / collapse the full description of a project card
+    $('.read-more-btn').click(function() {
+        var btn = $(this);
+        var card = btn.closest('.project-card');
+        var expanded = card.toggleClass('is-expanded').hasClass('is-expanded');
+
+        btn.toggleClass('is-expanded');
+        btn.find('.read-more-label').text(expanded ? 'Read less' : 'Read more');
+    });
+
+    // Toggle BibTeX inline views
+    $('.bibtex-toggle-btn').click(function() {
+        var bibtexBox = $(this).closest('.project-card').find('.bibtex-content-box');
+        bibtexBox.slideToggle(200);
+    });
+
 })
