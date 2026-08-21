@@ -146,10 +146,16 @@
         <span>Accompanying &amp; Downstream Projects</span>
       </h2>
 
-      <div class="columns is-centered project-cards">
+      <!-- Horizontal, drag-scrollable rail of project tiles -->
+      <div class="project-rail">
+        <button class="rail-nav is-prev" type="button" aria-label="Show previous projects" hidden>
+          <i class="fas fa-chevron-left"></i>
+        </button>
+
+        <div class="project-rail-track" tabindex="0" role="region" aria-label="Accompanying and downstream projects">
 
         <!-- Project 1 -->
-        <div class="column is-one-third">
+        <div class="project-rail-item">
           <div class="project-card">
             <h3 class="project-card-title">AI challenges the reference standards for lateral knee morphometry</h3>
             <p class="project-description">Many clinical reference values were fixed decades ago from small patient groups
@@ -185,7 +191,7 @@
         </div>
 
         <!-- Project 2 -->
-        <div class="column is-one-third">
+        <div class="project-rail-item">
           <div class="project-card">
             <h3 class="project-card-title">On the symmetry of the contralateral knee</h3>
             <p class="project-description">The contralateral knee is widely used as a reference in patellofemoral radiography,
@@ -222,10 +228,18 @@
         </div>
 
         <!-- Project 3 (placeholder) -->
-        <div class="column is-one-third">
+        <div class="project-rail-item">
           <div class="project-card">
-            <h3 class="project-card-title">Assessing pediatric hip morphometry</h3>
-            <p class="project-description">Coming soon</p>
+            <h3 class="project-card-title">A morphometry agent for clinical routine</h3>
+            <p class="project-status">Coming soon</p>
+            <p class="project-description">Bringing automated morphometry into everyday reporting, an LLM agent works a
+              radiograph case step by step and drafts the structured report, taking every measurement from the validated
+              morphometry service and every reference range from a guideline corpus instead of its own priors, while the
+              radiologist stays in the loop to correct landmarks, wording and thresholds.</p>
+            <button class="read-more-btn">
+              <span class="read-more-label">Read more</span>
+              <i class="fas fa-chevron-down icon-rot"></i>
+            </button>
             <div class="project-card-actions">
               <div class="buttons">
                 <a href="#" class="button is-small is-rounded is-dark">
@@ -249,6 +263,67 @@
           </div>
         </div>
 
+        <!-- Project 4 (placeholder) -->
+        <div class="project-rail-item">
+          <div class="project-card">
+            <h3 class="project-card-title">Assessing pediatric hip morphometry</h3>
+            <p class="project-status">Coming soon</p>
+            <div class="project-card-actions">
+              <div class="buttons">
+                <a href="#" class="button is-small is-rounded is-dark">
+                  <span class="icon is-small"><i class="fas fa-file-pdf"></i></span>
+                  <span>Paper - tba</span>
+                </a>
+                <button class="button is-small is-rounded is-light bibtex-toggle-btn">
+                  <span class="icon is-small"><i class="fas fa-code"></i></span>
+                  <span>BibTeX</span>
+                </button>
+              </div>
+              <div class="bibtex-content-box" style="display: none;">
+                <pre style="padding: 0.5rem; font-size: 0.7rem; white-space: pre-wrap; overflow-x: auto; background-color: #f5f5f5; border-radius: 4px;"><code>@article{tba,
+  title={tba},
+  author={tba},
+  journal={tba},
+  year={2026}
+}</code></pre>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Project 5 (placeholder) -->
+        <div class="project-rail-item">
+          <div class="project-card">
+            <h3 class="project-card-title">Automated quality control of hip radiographs</h3>
+            <p class="project-status">Coming soon</p>
+            <div class="project-card-actions">
+              <div class="buttons">
+                <a href="#" class="button is-small is-rounded is-dark">
+                  <span class="icon is-small"><i class="fas fa-file-pdf"></i></span>
+                  <span>Paper - tba</span>
+                </a>
+                <button class="button is-small is-rounded is-light bibtex-toggle-btn">
+                  <span class="icon is-small"><i class="fas fa-code"></i></span>
+                  <span>BibTeX</span>
+                </button>
+              </div>
+              <div class="bibtex-content-box" style="display: none;">
+                <pre style="padding: 0.5rem; font-size: 0.7rem; white-space: pre-wrap; overflow-x: auto; background-color: #f5f5f5; border-radius: 4px;"><code>@article{tba,
+  title={tba},
+  author={tba},
+  journal={tba},
+  year={2026}
+}</code></pre>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        </div>
+
+        <button class="rail-nav is-next" type="button" aria-label="Show more projects" hidden>
+          <i class="fas fa-chevron-right"></i>
+        </button>
       </div>
     </div>
   </section>

@@ -156,15 +156,171 @@ button, input, select, textarea {
   color: #3273dc;
 }
 
-/* Let each card size to its own content, so expanding one card does not
-   stretch its neighbour. align-items: flex-start stops the columns from
-   matching heights; the cards stay top-aligned instead. */
-.project-cards {
-  align-items: flex-start;
+/* The tiles live in a horizontal rail instead of a wrapping grid: the list
+   keeps growing, and a single band of constant height scales to any number of
+   projects without pushing the rest of the page down. The rail can be dragged
+   with the mouse, scrolled with a trackpad/wheel, swiped on touch, or stepped
+   through with the two chevron buttons. */
+.project-rail {
+  position: relative;
+  max-width: 100%;
 }
 
-.project-cards .column {
+/* Bulma's .container is a flex item of .hero, so its width follows its content
+   unless something caps it. From the desktop breakpoint up, Bulma's own
+   max-width does that; below it nothing does, and the container would grow to
+   the rail's full content width and push the whole page sideways. The rail
+   scrolls internally, so the container must stay at the viewport's width. */
+.downstream-section > .container {
+  min-width: 0;
+}
+
+@media screen and (max-width: 1023px) {
+  .downstream-section > .container {
+    width: 100%;
+    max-width: 100%;
+  }
+}
+
+/* align-items: flex-start lets each card size to its own content, so expanding
+   one card does not stretch its neighbours. */
+.project-rail-track {
   display: flex;
+  align-items: flex-start;
+  gap: 1.5rem;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scroll-behavior: smooth;
+  overscroll-behavior-x: contain;
+  -webkit-overflow-scrolling: touch;
+  /* room for the cards' hover lift and shadow, which overflow would clip */
+  padding: 0.6rem 0.25rem 0.9rem;
+  cursor: grab;
+  scrollbar-width: thin;
+  scrollbar-color: #dcdcdc transparent;
+}
+
+.project-rail-track:focus-visible {
+  outline: 2px solid #3273dc;
+  outline-offset: 4px;
+  border-radius: 12px;
+}
+
+.project-rail-track::-webkit-scrollbar {
+  height: 6px;
+}
+
+.project-rail-track::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.project-rail-track::-webkit-scrollbar-thumb {
+  background: #dcdcdc;
+  border-radius: 3px;
+}
+
+.project-rail-track::-webkit-scrollbar-thumb:hover {
+  background: #c4c4c4;
+}
+
+/* While dragging: no smooth-scroll lag between pointer and rail, and no
+   accidental text selection across the cards. The rail scrolls freely rather
+   than snapping, so the pointer stays glued to the card it grabbed. */
+.project-rail-track.is-dragging {
+  cursor: grabbing;
+  scroll-behavior: auto;
+  user-select: none;
+}
+
+.project-rail-item {
+  display: flex;
+  flex: 0 0 22rem;
+  max-width: 22rem;
+}
+
+/* Soft fade at whichever edge still has tiles behind it - the hint that the
+   rail continues, without adding a permanent element to the layout. */
+.project-rail::before,
+.project-rail::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 3rem;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+  z-index: 2;
+}
+
+.project-rail::before {
+  left: 0;
+  background: linear-gradient(to right, #fff 15%, rgba(255, 255, 255, 0));
+}
+
+.project-rail::after {
+  right: 0;
+  background: linear-gradient(to left, #fff 15%, rgba(255, 255, 255, 0));
+}
+
+.project-rail.has-fade-start::before,
+.project-rail.has-fade-end::after {
+  opacity: 1;
+}
+
+/* Step buttons, shown only while there is something to scroll to */
+.rail-nav {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  padding: 0;
+  background: #fff;
+  border: 1px solid #e0e0e0;
+  border-radius: 50%;
+  color: #4a4a4a;
+  font-size: 0.8rem;
+  cursor: pointer;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
+  transition: background-color 0.2s ease, box-shadow 0.2s ease, color 0.2s ease;
+}
+
+.rail-nav:hover {
+  background: #f5f5f5;
+  color: #2b2b2b;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.12);
+}
+
+.rail-nav[hidden] {
+  display: none;
+}
+
+.rail-nav.is-prev {
+  left: -0.5rem;
+}
+
+.rail-nav.is-next {
+  right: -0.5rem;
+}
+
+@media screen and (max-width: 768px) {
+  /* leave room for the next card to peek in - on touch that sliver is the only
+     hint that the rail continues, since the step buttons are hidden */
+  .project-rail-item {
+    flex-basis: 74vw;
+    max-width: 74vw;
+  }
+
+  /* On touch the drag itself is the affordance; the buttons would only crowd
+     the narrow viewport. */
+  .rail-nav {
+    display: none;
+  }
 }
 
 .project-card {
@@ -227,6 +383,20 @@ button, input, select, textarea {
 .project-card.is-expanded .project-description {
   flex: 0 0 auto;
   overflow: visible;
+}
+
+/* "Coming soon" reads as a status of the tile, not as its body text */
+.project-status {
+  flex: 0 0 auto;
+  align-self: flex-start;
+  margin-bottom: 0.75rem;
+  padding: 0.15rem 0.6rem;
+  background: #f0f4fc;
+  border-radius: 999px;
+  color: #3273dc;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
 }
 
 .read-more-btn {
