@@ -21,11 +21,31 @@ def calculate_angle(line1, line2):
     magnitude1 = np.linalg.norm(line1)
     magnitude2 = np.linalg.norm(line2)
 
-    # Calculate the angle
-    angle_rad = np.arccos(dot_product / (magnitude1 * magnitude2))
+    # Calculate the angle (clipped: collinear axes can overshoot +-1 by rounding)
+    angle_rad = np.arccos(np.clip(dot_product / (magnitude1 * magnitude2), -1.0, 1.0))
     angle_deg = np.degrees(angle_rad)
 
     return angle_deg
+
+
+def calculate_signed_angle(line1, line2):
+    """Angle between two axes that both point distally, signed by their
+    relative dorsoplantar orientation.
+
+    Landmarks are stored as (y, x) with y running down the image, so the
+    plantar direction is +y. The result is positive when ``line1`` is declined
+    more plantarwards than ``line2`` (apex plantar), negative when it is the
+    more dorsal of the two (apex dorsal). Normalising by the anterior direction
+    of ``line2`` keeps the sign independent of laterality and of whether the
+    foot faces left or right in the image.
+    """
+
+    angle_deg = calculate_angle(line1, line2)
+
+    facing = np.sign(line2[1]) or 1.0
+    cross = line2[1] * line1[0] - line2[0] * line1[1]
+
+    return np.copysign(angle_deg, cross * facing)
 
 
 
@@ -1215,12 +1235,12 @@ def kpts_medial_arch_angle_robust():
 
 def mearys_angle(landmarks):
     
-    # Calculate the axes
-    longitidinal_talus = landmarks[9] - landmarks[8]
+    # Calculate the axes (both distally directed, so collinear axes give 0)
+    longitidinal_talus = landmarks[8] - landmarks[9]
     longitudinal_metatarsal = landmarks[18] - landmarks[19]
 
-    # Calculate the angle
-    angle_deg = calculate_angle(longitidinal_talus, longitudinal_metatarsal)
+    # Calculate the angle (positive: apex plantar / pes planus)
+    angle_deg = calculate_signed_angle(longitidinal_talus, longitudinal_metatarsal)
     
     return angle_deg
 
@@ -1241,14 +1261,14 @@ def kpts_mearys_angle():
 
 def mearys_angle_robust(landmarks):
     
-    # Calculate the axes
-    longitidinal_talus = np.mean([landmarks[2], landmarks[3], landmarks[4], landmarks[5], landmarks[9]], axis=0) -\
-                         np.mean([landmarks[4], landmarks[5], landmarks[6], landmarks[7], landmarks[8]], axis=0)
+    # Calculate the axes (both distally directed, so collinear axes give 0)
+    longitidinal_talus = np.mean([landmarks[4], landmarks[5], landmarks[6], landmarks[7], landmarks[8]], axis=0) -\
+                         np.mean([landmarks[2], landmarks[3], landmarks[4], landmarks[5], landmarks[9]], axis=0)
     longitudinal_metatarsal = np.mean([landmarks[14], landmarks[15], landmarks[16], landmarks[17], landmarks[18]], axis=0) -\
                               np.mean([landmarks[10], landmarks[11], landmarks[12], landmarks[13], landmarks[19]], axis=0)
 
-    # Calculate the angle
-    angle_deg = calculate_angle(longitidinal_talus, longitudinal_metatarsal)
+    # Calculate the angle (positive: apex plantar / pes planus)
+    angle_deg = calculate_signed_angle(longitidinal_talus, longitudinal_metatarsal)
     
     return angle_deg
 
