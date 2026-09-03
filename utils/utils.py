@@ -9,6 +9,7 @@ import os
 import glob
 import csv
 import json
+import hashlib
 import torch
 import numpy as np
 
@@ -183,6 +184,23 @@ def geometric_median(points, eps=1e-5):
 
 
 
+def pair_seed(ref_path, target_path, base_seed=0):
+    """Stable RNG seed for one (reference, target) image pair.
+
+    RoMa's match sampling draws from the global torch RNG, so without this the
+    result of a pair depends on how many pairs were drawn before it in the same
+    process: a resumed run skips existing CSVs, a re-run array task starts mid
+    sequence, and the resident service never restarts between requests. Seeding
+    from the pair identity makes a pair reproducible independently of that order.
+
+    hashlib rather than hash(), which is salted per process and would make the
+    seed itself differ between runs.
+    """
+    key = '{0}|{1}|{2}'.format(os.path.basename(ref_path), os.path.basename(target_path), base_seed)
+
+    return int(hashlib.md5(key.encode('utf-8')).hexdigest()[:8], 16)
+
+
 def compute_matches(ref_img_path, ref_kpt_path, im2_path, model, device, landmark_scaling=(1, 1)):
 
     """
@@ -217,6 +235,13 @@ def compute_matches(ref_img_path, ref_kpt_path, im2_path, model, device, landmar
 
     #########################################
     # Match images
+    # Seeded per pair so the sampling below does not depend on how many pairs
+    # ran before this one in the process (see pair_seed).
+    seed = pair_seed(ref_img_path, im2_path)
+    torch.manual_seed(seed)
+    torch.cuda.manual_seed_all(seed)
+    np.random.seed(seed)          # only reaches the match-plot colours, but keeps those stable too
+
     with torch.no_grad():
         warp, certainty = model.match(ref_img_path, im2_path, device=device)
 
