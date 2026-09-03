@@ -1793,14 +1793,27 @@ def kpts_acrominal_index():
 
 #---------------------------------------------------------------------
 
-def acromiohumeral_interval(landmarks):
-    
-    # Define set of all x-coordinates
-    acromion_x = [landmarks[5][0], landmarks[6][0], landmarks[7][0], landmarks[8][0], landmarks[9][0], landmarks[10][0], landmarks[11][0]]
-    humeral_head_x = [landmarks[12][0], landmarks[13][0], landmarks[14][0], landmarks[15][0], landmarks[16][0], landmarks[17][0], landmarks[18][0], landmarks[19][0]]
+def _acromion_center_and_line(landmarks):
+    """Reference point on the acromion for the acromiohumeral interval.
 
-    # Determine distance between both sets
-    dists = cdist(np.array(acromion_x).reshape(-1, 1), np.array(humeral_head_x).reshape(-1, 1))
+    A line is fitted through the whole acromion undersurface (both edges plus
+    the five equidistant points) and its centre is used, instead of whichever
+    single landmark happens to sit lowest.
+    """
+    acromion_landmarks = [landmarks[5], landmarks[6], landmarks[7], landmarks[8], landmarks[9], landmarks[10], landmarks[11]]
+    line_start, line_end = best_fit_line_from_landmarks(acromion_landmarks)
+
+    return acromion_landmarks, _mid([line_start, line_end]), line_start, line_end
+
+
+def acromiohumeral_interval(landmarks):
+
+    _, acromion_center, _, _ = _acromion_center_and_line(landmarks)
+    humeral_head_landmarks = [landmarks[12], landmarks[13], landmarks[14], landmarks[15], landmarks[16], landmarks[17], landmarks[18], landmarks[19]]
+
+    # True (oblique) distance to the closest humeral head landmark, rather than
+    # the purely vertical offset between the two landmark sets used before.
+    dists = cdist(acromion_center.reshape(1, -1), np.array(humeral_head_landmarks))
     min_dist = np.min(dists)
 
     return min_dist
@@ -1808,21 +1821,18 @@ def acromiohumeral_interval(landmarks):
 
 def vis_acromiohumeral_interval(landmarks):
 
-    # Define set of all x-coordinates
-    acromion_x = [landmarks[5][0], landmarks[6][0], landmarks[7][0], landmarks[8][0], landmarks[9][0], landmarks[10][0], landmarks[11][0]]
-    acromion_y = [landmarks[5][1], landmarks[6][1], landmarks[7][1], landmarks[8][1], landmarks[9][1], landmarks[10][1], landmarks[11][1]]
-    humeral_head_x = [landmarks[12][0], landmarks[13][0], landmarks[14][0], landmarks[15][0], landmarks[16][0], landmarks[17][0], landmarks[18][0], landmarks[19][0]]
-    humeral_head_y = [landmarks[12][1], landmarks[13][1], landmarks[14][1], landmarks[15][1], landmarks[16][1], landmarks[17][1], landmarks[18][1], landmarks[19][1]]
+    acromion_landmarks, acromion_center, line_start, line_end = _acromion_center_and_line(landmarks)
+    humeral_head_landmarks = [landmarks[12], landmarks[13], landmarks[14], landmarks[15], landmarks[16], landmarks[17], landmarks[18], landmarks[19]]
 
-    # Determine distance between both sets
-    dists = cdist(np.array(acromion_x).reshape(-1, 1), np.array(humeral_head_x).reshape(-1, 1))
+    # Determine the humeral head landmark closest to the acromion centre
+    dists = cdist(acromion_center.reshape(1, -1), np.array(humeral_head_landmarks))
+    min_humeral_idx = int(np.argmin(dists))
 
-    # Determine landmarks for the minimal distance
-    min_acromion_idx, min_humeral_idx = np.unravel_index(np.argmin(dists), dists.shape)	
-
-    return [landmarks[5], landmarks[6], landmarks[7], landmarks[8], landmarks[9], landmarks[10], landmarks[11], landmarks[12], landmarks[13], landmarks[14], landmarks[15], landmarks[16], landmarks[17], landmarks[18], landmarks[19]],\
-           [[[acromion_x[min_acromion_idx], acromion_y[min_acromion_idx]], [humeral_head_x[min_humeral_idx], acromion_y[min_acromion_idx]]]],\
-           [[[humeral_head_x[min_humeral_idx], acromion_y[min_acromion_idx]], [humeral_head_x[min_humeral_idx], humeral_head_y[min_humeral_idx]]]],\
+    # The points stay in kpts_acromiohumeral_interval() order: clients pair the
+    # two lists positionally, so the fitted centre is carried by the lines.
+    return acromion_landmarks + humeral_head_landmarks,\
+           [[acromion_center, humeral_head_landmarks[min_humeral_idx]]],\
+           [[line_start, line_end]],\
            [POINT_COLOR,]*15,\
            [LINE_COLOR],\
            [POINT_COLOR]
