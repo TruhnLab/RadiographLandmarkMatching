@@ -3,6 +3,8 @@ import sys
 sys.path.append('./ThirdParty')
 
 import os
+import shutil
+import tempfile
 import torch
 import glob
 import json
@@ -185,6 +187,13 @@ def main(hparams, roma_model=None):
         os.makedirs(os.path.join(hparams.save_path, f'{id_target}_matches'), exist_ok=True)
         procrustes_errors = []
         matching_state = 0
+
+        # The source image is never modified. When the laterality check fires, a
+        # mirrored copy is written to a temporary directory and matched against
+        # instead; landmarks are mapped back to the original frame before saving.
+        match_img_path = target_img_path
+        flip_scratch = None
+        flip_info = None
         # matching_state:   0 = initial matching
         #                   1 = flipped image and restart matching
         #                   2 = aborting due to laterality issues
@@ -223,7 +232,7 @@ def main(hparams, roma_model=None):
 
                 # Matching
                 print(f"{num_matching+1}/{count_ref_used} {id_img} to {id_target}...")
-                img_ref, img_target, keypoints_source, registered_kpts = compute_matches(ref_img_path, ref_kpt_path, target_img_path, roma_model, device, landmark_scaling=hparams.landmark_scaling)
+                img_ref, img_target, keypoints_source, registered_kpts = compute_matches(ref_img_path, ref_kpt_path, match_img_path, roma_model, device, landmark_scaling=hparams.landmark_scaling)
 
                 # Calculate confidence
                 _, _, procrustes_error = procrustes(keypoints_source, registered_kpts)
@@ -239,7 +248,15 @@ def main(hparams, roma_model=None):
                 # save_plot(save_path_image)
                 # plt.close()
 
-                create_csv(registered_kpts.numpy(force=True).astype(int), save_path_matches.replace('.csv',''), test_split=0, val_split=0)
+                # Procrustes above is deliberately computed in the matched frame; only
+                # the stored coordinates are mapped back, so everything downstream
+                # (bulk median, overlays, measurements) speaks the original image.
+                kpts_to_save = registered_kpts.numpy(force=True)
+                if flip_info is not None:
+                    kpts_to_save = kpts_to_save.copy()
+                    kpts_to_save[:, 0] = (img_target.shape[1] - 1) - kpts_to_save[:, 0]
+
+                create_csv(kpts_to_save.astype(int), save_path_matches.replace('.csv',''), test_split=0, val_split=0)
                 
                 # # Save matching confidence and procrustes error 
                 # match_data = {
@@ -256,7 +273,8 @@ def main(hparams, roma_model=None):
                     if os.path.exists(save_path_tmp+f'_{num_matching-1}.png'):
                         os.remove(save_path_tmp+f'_{num_matching-1}.png')
                     # Save current temporary result
-                    _ = agreement_analysis(hparams.save_path, img_target, id_target, save_path_tmp+f'_{num_matching}', format='png')
+                    img_overview = io.imread(target_img_path) if flip_info is not None else img_target
+                    _ = agreement_analysis(hparams.save_path, img_overview, id_target, save_path_tmp+f'_{num_matching}', format='png')
 
                 # Check if the procrustes error exceeded the threshold multiple times (indicating potential laterality or anatomy mismatch)
                 num_violations = np.sum(np.array(procrustes_errors) > hparams.max_matching_error)
@@ -268,11 +286,21 @@ def main(hparams, roma_model=None):
                         os.remove(f)
 
                     if matching_state == 0:
-                        print('Flipping image horizontally to align with references. Deleting previous matching results and restarting matching with flipped image...')
+                        print('Flipping image horizontally to align with references. Deleting previous matching results and restarting matching with a mirrored working copy...')
 
-                        # Flip the target image horizontally
-                        img_target = np.flip(img_target, axis=1)
-                        io.imsave(target_img_path, img_target)
+                        # Mirror into a temporary directory rather than in place. PNG
+                        # keeps it lossless; re-encoding the source as JPEG would
+                        # degrade it on every pass.
+                        flip_scratch = tempfile.mkdtemp(prefix='roma_flip_')
+                        match_img_path = os.path.join(flip_scratch, f'{id_target}_mirrored.png')
+                        io.imsave(match_img_path, np.flip(io.imread(target_img_path), axis=1))
+
+                        flip_info = {
+                            'flipped': True,
+                            'violations': int(num_violations),
+                            'references_tried': int(num_matching + 1),
+                            'max_matching_error': hparams.max_matching_error,
+                        }
 
                         # Save procrustes errors for reference and reset
                         # with open(save_path_bulk + '_procrustes_violation.json', 'w') as f:
@@ -296,18 +324,34 @@ def main(hparams, roma_model=None):
                 # AGREEMENT CALCULATION
                 # ------------------------
                 
+                # Landmarks are back in the original frame, so the overview has to be
+                # drawn on the original image, not on the mirrored working copy.
+                img_overview = io.imread(target_img_path) if flip_info is not None else img_target
+
                 # Create final results
-                prd_kpts_mean = agreement_analysis(hparams.save_path, img_target, id_target, save_path_bulk, format='svg')
+                prd_kpts_mean = agreement_analysis(hparams.save_path, img_overview, id_target, save_path_bulk, format='svg')
                 create_csv(prd_kpts_mean, save_path_bulk, test_split=0, val_split=0)
 
                 # Save laterality metrics
                 with open(save_path_bulk + '_procrustes.json', 'w') as f:
                         json.dump(procrustes_errors, f, indent=2)
 
+                # Audit marker, written only when the image had to be mirrored. Its
+                # absence means 'not flipped', so counting these across a run folder
+                # shows at a glance whether max_matching_error is set too tight.
+                if flip_info is not None:
+                    with open(save_path_bulk + '_flipped.json', 'w') as f:
+                        json.dump(flip_info, f, indent=2)
+
                 # Remove temporary results if existing
                 if hparams.temp_results:
                     for f in glob.glob(save_path_tmp + '*.png'):
                         os.remove(f)
+
+        # Drop the mirrored working copy. Reached on both the finished and the
+        # aborted path; a hard kill leaves it in the system temp directory only.
+        if flip_scratch is not None:
+            shutil.rmtree(flip_scratch, ignore_errors=True)
 
 
 

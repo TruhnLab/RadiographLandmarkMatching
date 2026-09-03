@@ -113,10 +113,11 @@ def _run_pipeline(image_bytes, anatomy, projection, mpp, num_references, max_mat
                   return_image=False):
     """Run preparation + matching + measurement for one image.
 
-    If ``return_image`` is set, the response also carries the *processed* image
-    (base64), i.e. the one on disk after matching. do_matching flips the target
-    horizontally when it corrects laterality, so this image and the returned
-    landmarks are always in the same frame (needed for measurement overlays).
+    If ``return_image`` is set, the response also carries the prepared image
+    (base64), i.e. the one matching ran on. do_matching leaves it untouched even
+    when it corrects laterality (it mirrors a working copy and maps the landmarks
+    back), so this image and the returned landmarks are always in the same frame
+    (needed for measurement overlays).
     """
     with tempfile.TemporaryDirectory() as job_dir:
 
@@ -171,8 +172,8 @@ def _run_pipeline(image_bytes, anatomy, projection, mpp, num_references, max_mat
             )
         landmarks = [[float(x), float(y)] for x, y in read_csv(bulk_csv)]
 
-        # Processed target image (flipped in-place by do_matching if laterality was
-        # corrected), so it stays consistent with the landmarks above.
+        # The prepared target image. Matching never modifies it, and landmarks are
+        # always stored in its frame, so the two stay consistent.
         processed_image_b64 = None
         if return_image:
             with open(job['image_path'], 'rb') as f:

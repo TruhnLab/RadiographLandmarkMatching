@@ -234,8 +234,9 @@ Tools:
   one measurement's construction (points and lines) drawn on it, as an image. Use
   the `result_token` from a successful `get_morphometry` and a name from its
   `visualizable_measurements`; the token works for multiple measurements until it
-  expires. Overlays are drawn on the processed image, so they stay aligned even
-  when laterality was corrected. (The client must be able to render image results.)
+  expires. Overlays are drawn on the same image the landmarks were computed in, so
+  they stay aligned even when laterality was corrected internally. (The client must
+  be able to render image results.)
 - `morphometry_health()` returns `{status, supported: [...]}`, where each entry is
   `{anatomy, projection, measurements: [...]}`. It does no GPU work, so an agent can
   call it up front to learn every supported anatomy/projection pair and the exact
