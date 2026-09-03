@@ -162,7 +162,7 @@ The `experiment_config_windows.json` file contains measurement configurations:
 ```bash
 # 1. Match landmarks
 python do_matching.py \
-  --reference_path "E:/data/UKAKneeX/LATERAL_ALL_References" \
+  --reference_path "C:/path/to/reference/images" \
   --data_path "C:/path/to/target/images" \
   --save_path "C:/path/to/results"
 
