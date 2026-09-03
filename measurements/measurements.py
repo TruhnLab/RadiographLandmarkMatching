@@ -399,7 +399,7 @@ def get_function_dict(mode='feet_ap'):
         function_dict = {
                         'Critical Shoulder Angle': [critical_shoulder_angle, vis_critical_shoulder_angle, kpts_critical_shoulder_angle], #0
                         'Lateral Acromion Angle': [lateral_acromion_angle, vis_lateral_acromion_angle, kpts_lateral_acromion_angle], #1
-                        'Acrominal Index': [acrominal_index, vis_acrominal_index, kpts_acrominal_index], #2
+                        'Acromial Index': [acromial_index, vis_acromial_index, kpts_acromial_index], #2
                         'Acromiohumeral Interval': [acromiohumeral_interval, vis_acromiohumeral_interval, kpts_acromiohumeral_interval], #3
                         'Lateral Acromion Angle (robust)': [lateral_acromion_angle_robust, vis_lateral_acromion_angle_robust, kpts_lateral_acromion_angle_robust], #4
                         }
@@ -407,8 +407,8 @@ def get_function_dict(mode='feet_ap'):
     elif mode == 'shoulder_y':
         kpt_names = kpt_names_shoulder_y
         function_dict = {
-                        'Acrominal Slope': [acrominal_slope, vis_acrominal_slope, kpts_acrominal_slope], #0
-                        'Acrominal Tilt': [acrominal_tilt, vis_acrominal_tilt, kpts_acrominal_tilt], #1
+                        'Acromial Slope': [acromial_slope, vis_acromial_slope, kpts_acromial_slope], #0
+                        'Acromial Tilt': [acromial_tilt, vis_acromial_tilt, kpts_acromial_tilt], #1
                         'Acromiohumeral Distance': [acromiohumeral_distance, vis_acromiohumeral_distance, kpts_acromiohumeral_distance], #2
                         }
         
@@ -437,7 +437,7 @@ def get_function_dict(mode='feet_ap'):
                         'Blackburn-Peel Ratio': [blackburn_peel_ratio, vis_blackburn_peel_ratio, kpts_blackburn_peel_ratio], #3
                         'Patella Morphology Ratio': [patella_morphology_ratio, vis_patella_morphology_ratio, kpts_patella_morphology_ratio], #4
                         'Posterior Posterior Tibial Slope': [posterior_posterior_tibial_slope, vis_posterior_posterior_tibial_slope, kpts_posterior_posterior_tibial_slope], #5
-                        'Medial Posterior Tibial Slope': [medial_posterior_tibial_slope, vis_medial_posterior_tibial_slope, kpts_medial_posterior_tibial_slope], #6
+                        'Diaphyseal Posterior Tibial Slope': [diaphyseal_posterior_tibial_slope, vis_diaphyseal_posterior_tibial_slope, kpts_diaphyseal_posterior_tibial_slope], #6
                         'Anterior Posterior Tibial Slope': [anterior_posterior_tibial_slope, vis_anterior_posterior_tibial_slope, kpts_anterior_posterior_tibial_slope], #7
                         }
         
@@ -1742,7 +1742,7 @@ def kpts_lateral_acromion_angle_robust():
 
 #---------------------------------------------------------------------
 
-def acrominal_index(landmarks):
+def acromial_index(landmarks):
     
     # For landmarks 1-3 determine the perpendicular point on the line between landmarks 4 and 5
     perpendicular1 = perpendicular_point_on_line(landmarks[3], landmarks[4], landmarks[0])
@@ -1763,7 +1763,7 @@ def acrominal_index(landmarks):
     return glenoid_length_acromion/glenoid_length_humerus_head
 
 
-def vis_acrominal_index(landmarks):
+def vis_acromial_index(landmarks):
 
     # For landmarks 1-3 determine the perpendicular point on the line between landmarks 4 and 5
     perpendicular1 = perpendicular_point_on_line(landmarks[3], landmarks[4], landmarks[0])
@@ -1788,7 +1788,7 @@ def vis_acrominal_index(landmarks):
            [LINE_COLOR, LINE_COLOR],\
            [LINE_COLOR]
 
-def kpts_acrominal_index():
+def kpts_acromial_index():
     return [0, 1, 2, 3, 4, 5]
 
 #---------------------------------------------------------------------
@@ -1877,19 +1877,19 @@ kpt_names_shoulder_y = [
 
 #---------------------------------------------------------------------
 
-def acrominal_slope(landmarks):
+def acromial_slope(landmarks):
     
     # Calculate the axes
-    acrominal_line1 = landmarks[0] - landmarks[2]
-    acrominal_line2 = landmarks[1] - landmarks[2]
+    acromial_line1 = landmarks[0] - landmarks[2]
+    acromial_line2 = landmarks[1] - landmarks[2]
 
     # Calculate the angle
-    angle_deg = calculate_angle(acrominal_line1, acrominal_line2)
+    angle_deg = calculate_angle(acromial_line1, acromial_line2)
     
     return angle_deg
 
 
-def vis_acrominal_slope(landmarks):
+def vis_acromial_slope(landmarks):
 
     return [landmarks[0], landmarks[1], landmarks[2]],\
            [[landmarks[0], landmarks[2]], [landmarks[1], landmarks[2]]],\
@@ -1898,36 +1898,36 @@ def vis_acrominal_slope(landmarks):
            [LINE_COLOR, LINE_COLOR],\
            []
 
-def kpts_acrominal_slope():
+def kpts_acromial_slope():
     return [0, 1, 2]
 
 
 #---------------------------------------------------------------------
 
-def acrominal_tilt(landmarks):
+def acromial_tilt(landmarks):
     
     # Calculate the axes
     acromion_undersurface = landmarks[0] - landmarks[1]
-    acrominal_cor = np.mean([landmarks[9],landmarks[10],landmarks[11]], axis=0) - landmarks[2]
+    acromial_cor = np.mean([landmarks[9],landmarks[10],landmarks[11]], axis=0) - landmarks[2]
 
     # Calculate the angle
-    angle_deg = calculate_angle(acromion_undersurface, acrominal_cor)
+    angle_deg = calculate_angle(acromion_undersurface, acromial_cor)
     
     return angle_deg
 
 
-def vis_acrominal_tilt(landmarks):
+def vis_acromial_tilt(landmarks):
 
-    mean_acrominal_cor = np.mean([landmarks[9],landmarks[10],landmarks[11]], axis=0)
+    mean_acromial_cor = np.mean([landmarks[9],landmarks[10],landmarks[11]], axis=0)
 
     return [landmarks[0], landmarks[1], landmarks[2], landmarks[9], landmarks[10], landmarks[11]],\
-           [[landmarks[0], landmarks[1]], [mean_acrominal_cor, landmarks[2]]],\
-           [[mean_acrominal_cor, landmarks[9]], [mean_acrominal_cor, landmarks[10]], [mean_acrominal_cor, landmarks[11]]],\
+           [[landmarks[0], landmarks[1]], [mean_acromial_cor, landmarks[2]]],\
+           [[mean_acromial_cor, landmarks[9]], [mean_acromial_cor, landmarks[10]], [mean_acromial_cor, landmarks[11]]],\
            [LINE_COLOR, LINE_COLOR, LINE_COLOR, LINE_COLOR, LINE_COLOR, LINE_COLOR],\
            [LINE_COLOR, LINE_COLOR],\
            [POINT_COLOR, POINT_COLOR, POINT_COLOR]
 
-def kpts_acrominal_tilt():
+def kpts_acromial_tilt():
     return [0, 1, 2, 9, 10, 11]
 
 
@@ -2424,7 +2424,7 @@ def kpts_posterior_posterior_tibial_slope():
 
 #---------------------------------------------------------------------
 
-def medial_posterior_tibial_slope(landmarks):
+def diaphyseal_posterior_tibial_slope(landmarks):
     
     posterior_tibial_cortex = landmarks[8] - landmarks[9]
     tibial_plateau = landmarks[7] - landmarks[6]
@@ -2436,7 +2436,7 @@ def medial_posterior_tibial_slope(landmarks):
     return 90-angle_deg
 
 
-def vis_medial_posterior_tibial_slope(landmarks):
+def vis_diaphyseal_posterior_tibial_slope(landmarks):
     
     return [landmarks[8], landmarks[9], landmarks[6], landmarks[7]],\
            [[landmarks[8], landmarks[9]], [landmarks[6], landmarks[7]]],\
@@ -2445,7 +2445,7 @@ def vis_medial_posterior_tibial_slope(landmarks):
            [LINE_COLOR, LINE_COLOR],\
            []
 
-def kpts_medial_posterior_tibial_slope():
+def kpts_diaphyseal_posterior_tibial_slope():
     return [8, 9, 6, 7]
 
 #---------------------------------------------------------------------
