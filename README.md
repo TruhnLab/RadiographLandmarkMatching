@@ -125,10 +125,12 @@ python do_matching.py \
 - `--reference_rank_file`: Optional JSON ranking to select the top-N references (default: none, so the first N by name are used)
 - `--max_matching_error`: Maximum allowed Procrustes error (default: 500)
 - `--coarse_res` / `--upsample_res`: Model resolution settings
+- `--overlay`: Also render the `{target_id}_matches_bulk.svg` overlay of all per-reference predictions (default: off)
+- `--knn`: Number of nearest sampled matches averaged per landmark (default: 15)
 
 **Output** (per target image, under `save_path`):
 - Per-reference landmarks (`{target_id}_matches/{ref_id}_to_{target_id}_matches.csv`)
-- Consensus landmarks (`{target_id}_matches_bulk.csv`) + overlay (`{target_id}_matches_bulk.svg`)
+- Consensus landmarks (`{target_id}_matches_bulk.csv`) + overlay (`{target_id}_matches_bulk.svg`, only with `--overlay`)
 - Per-reference Procrustes errors (`{target_id}_matches_bulk_procrustes.json`)
 
 ### 2. Measurements (`do_measurements.py`)

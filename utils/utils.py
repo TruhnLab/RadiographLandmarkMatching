@@ -201,7 +201,7 @@ def pair_seed(ref_path, target_path, base_seed=0):
     return int(hashlib.md5(key.encode('utf-8')).hexdigest()[:8], 16)
 
 
-def compute_matches(ref_img_path, ref_kpt_path, im2_path, model, device, landmark_scaling=(1, 1)):
+def compute_matches(ref_img_path, ref_kpt_path, im2_path, model, device, landmark_scaling=(1, 1), knn=15):
 
     """
     Computes matches between two images using the ROMA model.
@@ -212,6 +212,7 @@ def compute_matches(ref_img_path, ref_kpt_path, im2_path, model, device, landmar
     - model: The model instance used for matching.
     - device: The device (CPU or GPU) on which the model runs.
     - landmark_scaling: Scaling factors for the keypoints (default is (1, 1)).
+    - knn: Number of nearest sampled matches averaged per landmark (default is 15).
     Returns:
     - im1: The reference image.
     - im2: The target image.
@@ -260,9 +261,9 @@ def compute_matches(ref_img_path, ref_kpt_path, im2_path, model, device, landmar
 
         # get closets grid points
         dist = torch.norm(kpts1-source_kpt, dim=1, p=None)
-        knn = dist.topk(15, largest=False).indices
-        closest_source_kpts = kpts1[knn,:]
-        closest_target_kpts = kpts2[knn,:]
+        nearest = dist.topk(knn, largest=False).indices
+        closest_source_kpts = kpts1[nearest,:]
+        closest_target_kpts = kpts2[nearest,:]
 
         # translate source points by average distance from source to target
         distances = closest_source_kpts - closest_target_kpts

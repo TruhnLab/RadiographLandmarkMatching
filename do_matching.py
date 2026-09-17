@@ -15,13 +15,18 @@ from matplotlib import pyplot as plt
 
 from ThirdParty.romatch import roma_outdoor
 from utils.utils import read_csv, create_csv, load_model_weights,\
-                        compute_matches, procrustes, geometric_median
+                        procrustes, geometric_median
 from utils.vis2D import plot_images, plot_matches, save_plot
+from utils.matching_engine import get_engine, REFERENCES_PER_CALL
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 
-def agreement_analysis(pred_folder, img_target, id_target, save_path, format='svg'):
+def consensus_landmarks(pred_folder, id_target):
+    """Geometric-median consensus over all per-reference predictions of a target.
+
+    Returns (stacked per-reference landmarks [R, L, 2], consensus landmarks [L, 2]).
+    """
 
     # Get all prediction files
     prd_kpt_files_stacked = glob.glob(os.path.join(pred_folder, f'{id_target}_matches', '*_matches.csv'))
@@ -43,7 +48,13 @@ def agreement_analysis(pred_folder, img_target, id_target, save_path, format='sv
     prd_kpts_mean = np.zeros((prd_kpts_stacked.shape[1], 2))
     for i in range(prd_kpts_stacked.shape[1]):
         prd_kpts_mean[i] = geometric_median(prd_kpts_stacked[:, i, :])
-        
+
+    return prd_kpts_stacked, prd_kpts_mean
+
+
+def save_overlay(img_target, prd_kpts_stacked, prd_kpts_mean, save_path, format='svg'):
+    """Overlay of all per-reference predictions (green) and the consensus (red)."""
+
     # Reshape keypoint list as bulk (for visualization)
     prd_kpts_bulk = np.reshape(prd_kpts_stacked, (-1,2))
 
@@ -58,6 +69,12 @@ def agreement_analysis(pred_folder, img_target, id_target, save_path, format='sv
     plt.savefig(save_path+f'.{format}', format=format, bbox_inches="tight", pad_inches=0)
     plt.close()
 
+
+def agreement_analysis(pred_folder, img_target, id_target, save_path, format='svg'):
+
+    prd_kpts_stacked, prd_kpts_mean = consensus_landmarks(pred_folder, id_target)
+    save_overlay(img_target, prd_kpts_stacked, prd_kpts_mean, save_path, format=format)
+
     return prd_kpts_mean
 
 
@@ -69,7 +86,7 @@ def setup_model(hparams, device):
 
     Split out from ``main`` so a long-running service can load the model once
     at startup and reuse it across many requests instead of paying the (large)
-    weight-loading and ``torch.compile`` cost on every call.
+    weight-loading cost on every call.
     """
 
     # ------------------------
@@ -95,10 +112,8 @@ def setup_model(hparams, device):
                               coarse_res=hparams.coarse_res,
                               upsample_res=hparams.upsample_res)
     roma_model.eval()
-    try: # not yet working on windows (as of 06.25)
-        roma_model = torch.compile(roma_model)
-    except:
-        pass
+    # No torch.compile wrapper: it only compiles forward(), which matching never
+    # calls (it goes through match() / the matching engine), so it had no effect.
 
     return roma_model
 
@@ -117,9 +132,13 @@ def main(hparams, roma_model=None):
     # DATA DEFINITIONS
     # ------------------------
 
-    # Check which files have already been processed
+    # Check which targets have already been processed (a consensus file exists).
+    # Exact ID lookup: a prefix match would also skip target 'X' once 'X_2' is done.
     os.makedirs(hparams.save_path, exist_ok=True)
-    processed_paths = glob.glob(os.path.join(hparams.save_path, '*.csv'))
+    processed_ids = {os.path.basename(p)[:-len('_matches_bulk.csv')]
+                     for p in glob.glob(os.path.join(hparams.save_path, '*_matches_bulk.csv'))}
+
+    overlay = bool(getattr(hparams, 'overlay', False))
 
     # Get all target images
     target_img_paths = glob.glob(os.path.join(hparams.data_path, f'*.{hparams.image_filetype}'))
@@ -162,6 +181,9 @@ def main(hparams, roma_model=None):
     if roma_model is None:
         roma_model = setup_model(hparams, device)
 
+    # Matcher with a reference cache that lives as long as the model
+    engine = get_engine(roma_model, device)
+
 
 
     # ------------------------
@@ -175,18 +197,20 @@ def main(hparams, roma_model=None):
 
         # Load target image and check if already processed
         id_target = os.path.split(target_img_path)[-1].replace('.png','').replace('.jpg','')
-        processed_path = [i for i in processed_paths if os.path.split(i)[-1].startswith(f'{id_target}_')]
-        if len(processed_path)>0:
+        if id_target in processed_ids:
             print(f'Skipping {id_target} as it has already been processed...')
             continue
-        
+
         save_path_tmp = os.path.join(hparams.save_path, f'{id_target}_matches_tmp') if hparams.temp_results else None
         save_path_bulk = os.path.join(hparams.save_path, f'{id_target}_matches_bulk')
+        save_path_base = os.path.join(hparams.save_path, f'{id_target}_matches')
 
-        # Prepare save path and variables    
-        os.makedirs(os.path.join(hparams.save_path, f'{id_target}_matches'), exist_ok=True)
+        # Prepare save path and variables
+        os.makedirs(save_path_base, exist_ok=True)
         procrustes_errors = []
         matching_state = 0
+
+        img_overview = None  # original target image, decoded only if an overview is drawn
 
         # The source image is never modified. When the laterality check fires, a
         # mirrored copy is written to a temporary directory and matched against
@@ -206,6 +230,8 @@ def main(hparams, roma_model=None):
 
             lat_abort = False  # set if this pass stops early due to a laterality mismatch
 
+            # References still to match in this pass, in reference order
+            pending = []
             for num_matching, (ref_img_path, ref_kpt_path) in enumerate(zip(ref_img_files, ref_kpt_files)):
 
                 # Check if maximum number of references reached
@@ -224,97 +250,115 @@ def main(hparams, roma_model=None):
                     continue
 
                 # Check if the image has already been processed
-                save_path_base = os.path.join(hparams.save_path, f'{id_target}_matches')
                 save_path_matches = os.path.join(save_path_base, f'{id_img}_to_{id_target}_matches.csv')
                 if os.path.exists(save_path_matches):
                     print(f"Skipping {save_path_base} as matches already exist.")
                     continue
 
-                # Matching
-                print(f"{num_matching+1}/{count_ref_used} {id_img} to {id_target}...")
-                img_ref, img_target, keypoints_source, registered_kpts = compute_matches(ref_img_path, ref_kpt_path, match_img_path, roma_model, device, landmark_scaling=hparams.landmark_scaling)
+                pending.append((num_matching, id_img, ref_img_path, ref_kpt_path, save_path_matches))
 
-                # Calculate confidence
-                _, _, procrustes_error = procrustes(keypoints_source, registered_kpts)
-                procrustes_errors.append(procrustes_error)
-                matching_confidence = 1 - np.clip(procrustes_error, 0, hparams.max_matching_error) / hparams.max_matching_error
-                print(f"Matching done with a confidence of {matching_confidence:.2f}...")
+            # The target is encoded once per pass; references are matched a few at a
+            # time. Results are handled strictly one reference at a time, in order, so
+            # outputs and the laterality check are the same as matching them one by one.
+            target = engine.prepare_target(match_img_path) if pending else None
+            start = 0
+            while start < len(pending) and not lat_abort:
+                batch = pending[start:start + REFERENCES_PER_CALL]
+                start += REFERENCES_PER_CALL
+                batch_results = engine.match(target, [b[2] for b in batch], [b[3] for b in batch],
+                                             landmark_scaling=hparams.landmark_scaling, knn=hparams.knn)
 
-                # # Save image with matches for visualization
-                # save_path_image = os.path.join(save_path_base, f'{id_img}_to_{id_target}.png')
-                # plot_images([img_ref, img_target])
-                # plot_matches(keypoints_source, registered_kpts, color='red', lw=1.5, ps=6, a=0.5)
-                # plt.title(f'Matching confidence: {matching_confidence:.2f} ({procrustes_error:.4f})')
-                # save_plot(save_path_image)
-                # plt.close()
+                for (num_matching, id_img, ref_img_path, ref_kpt_path, save_path_matches), \
+                        (keypoints_source, registered_kpts) in zip(batch, batch_results):
 
-                # Procrustes above is deliberately computed in the matched frame; only
-                # the stored coordinates are mapped back, so everything downstream
-                # (bulk median, overlays, measurements) speaks the original image.
-                kpts_to_save = registered_kpts.numpy(force=True)
-                if flip_info is not None:
-                    kpts_to_save = kpts_to_save.copy()
-                    kpts_to_save[:, 0] = (img_target.shape[1] - 1) - kpts_to_save[:, 0]
+                    # Matching
+                    print(f"{num_matching+1}/{count_ref_used} {id_img} to {id_target}...")
 
-                create_csv(kpts_to_save.astype(int), save_path_matches.replace('.csv',''), test_split=0, val_split=0)
-                
-                # # Save matching confidence and procrustes error 
-                # match_data = {
-                #     "matching_confidence": float(f"{matching_confidence:.4f}"),
-                #     "procrustes_error": float(f"{procrustes_error:.4f}")
-                # }
-                # save_path_metrics = os.path.join(save_path_base, f'{id_img}_to_{id_target}_metrics.json')
-                # with open(save_path_metrics, 'w') as f:
-                #     json.dump(match_data, f, indent=2)
+                    # Calculate confidence
+                    _, _, procrustes_error = procrustes(keypoints_source, registered_kpts)
+                    procrustes_errors.append(procrustes_error)
+                    matching_confidence = 1 - np.clip(procrustes_error, 0, hparams.max_matching_error) / hparams.max_matching_error
+                    print(f"Matching done with a confidence of {matching_confidence:.2f}...")
 
-                # Create temporary visual results if specified
-                if hparams.temp_results:
-                    # Remove previous temporary results if existing
-                    if os.path.exists(save_path_tmp+f'_{num_matching-1}.png'):
-                        os.remove(save_path_tmp+f'_{num_matching-1}.png')
-                    # Save current temporary result
-                    img_overview = io.imread(target_img_path) if flip_info is not None else img_target
-                    _ = agreement_analysis(hparams.save_path, img_overview, id_target, save_path_tmp+f'_{num_matching}', format='png')
+                    # # Save image with matches for visualization
+                    # save_path_image = os.path.join(save_path_base, f'{id_img}_to_{id_target}.png')
+                    # plot_images([img_ref, img_target])
+                    # plot_matches(keypoints_source, registered_kpts, color='red', lw=1.5, ps=6, a=0.5)
+                    # plt.title(f'Matching confidence: {matching_confidence:.2f} ({procrustes_error:.4f})')
+                    # save_plot(save_path_image)
+                    # plt.close()
 
-                # Check if the procrustes error exceeded the threshold multiple times (indicating potential laterality or anatomy mismatch)
-                num_violations = np.sum(np.array(procrustes_errors) > hparams.max_matching_error)
-                if num_violations >= np.minimum(5, len(ref_img_files)): 
-                    print(f'Detected wrong laterality in {num_violations}/{len(ref_img_files)} matchings.')
+                    # Procrustes above is deliberately computed in the matched frame; only
+                    # the stored coordinates are mapped back, so everything downstream
+                    # (bulk median, overlays, measurements) speaks the original image.
+                    kpts_to_save = registered_kpts.numpy(force=True)
+                    if flip_info is not None:
+                        kpts_to_save = kpts_to_save.copy()
+                        kpts_to_save[:, 0] = (target['cols'] - 1) - kpts_to_save[:, 0]
 
-                    # Delete all current matching results for this target image
-                    for f in glob.glob(os.path.join(save_path_base, '*')):
-                        os.remove(f)
+                    create_csv(kpts_to_save.astype(int), save_path_matches.replace('.csv',''), test_split=0, val_split=0)
 
-                    if matching_state == 0:
-                        print('Flipping image horizontally to align with references. Deleting previous matching results and restarting matching with a mirrored working copy...')
+                    # # Save matching confidence and procrustes error 
+                    # match_data = {
+                    #     "matching_confidence": float(f"{matching_confidence:.4f}"),
+                    #     "procrustes_error": float(f"{procrustes_error:.4f}")
+                    # }
+                    # save_path_metrics = os.path.join(save_path_base, f'{id_img}_to_{id_target}_metrics.json')
+                    # with open(save_path_metrics, 'w') as f:
+                    #     json.dump(match_data, f, indent=2)
 
-                        # Mirror into a temporary directory rather than in place. PNG
-                        # keeps it lossless; re-encoding the source as JPEG would
-                        # degrade it on every pass.
-                        flip_scratch = tempfile.mkdtemp(prefix='roma_flip_')
-                        match_img_path = os.path.join(flip_scratch, f'{id_target}_mirrored.png')
-                        io.imsave(match_img_path, np.flip(io.imread(target_img_path), axis=1))
+                    # Create temporary visual results if specified
+                    if hparams.temp_results:
+                        # Remove previous temporary results if existing
+                        if os.path.exists(save_path_tmp+f'_{num_matching-1}.png'):
+                            os.remove(save_path_tmp+f'_{num_matching-1}.png')
+                        # Save current temporary result (on the original, never the mirrored, image)
+                        if img_overview is None:
+                            img_overview = io.imread(target_img_path)
+                        _ = agreement_analysis(hparams.save_path, img_overview, id_target, save_path_tmp+f'_{num_matching}', format='png')
 
-                        flip_info = {
-                            'flipped': True,
-                            'violations': int(num_violations),
-                            'references_tried': int(num_matching + 1),
-                            'max_matching_error': hparams.max_matching_error,
-                        }
+                    # Check if the procrustes error exceeded the threshold multiple times (indicating potential laterality or anatomy mismatch)
+                    num_violations = np.sum(np.array(procrustes_errors) > hparams.max_matching_error)
+                    if num_violations >= np.minimum(5, len(ref_img_files)): 
+                        print(f'Detected wrong laterality in {num_violations}/{len(ref_img_files)} matchings.')
 
-                        # Save procrustes errors for reference and reset
-                        # with open(save_path_bulk + '_procrustes_violation.json', 'w') as f:
-                        #     json.dump(procrustes_errors, f, indent=2)
-                        procrustes_errors = []
-                
-                    else:
-                        print('Flipping already done but laterality check still failed. Stopping matching to avoid infinite loop and including results for reference.')
-                        os.rmdir(save_path_base) 
+                        # Delete all current matching results for this target image
+                        for f in glob.glob(os.path.join(save_path_base, '*')):
+                            os.remove(f)
 
-                    # Break current matching loop to restart with flipped image or stop if already flipped
-                    lat_abort = True
-                    matching_state += 1
-                    break
+                        if matching_state == 0:
+                            print('Flipping image horizontally to align with references. Deleting previous matching results and restarting matching with a mirrored working copy...')
+                            del target  # release the features of the unmirrored image
+
+                            # Mirror into node-local scratch ($TMPDIR is per-job and cleaned
+                            # by the slurm epilog) rather than in place. PNG keeps it
+                            # lossless; re-encoding the source as JPEG would degrade it on
+                            # every pass.
+                            flip_scratch = tempfile.mkdtemp(prefix='roma_flip_',
+                                                            dir=os.environ.get('TMPDIR', tempfile.gettempdir()))
+                            match_img_path = os.path.join(flip_scratch, f'{id_target}_mirrored.png')
+                            io.imsave(match_img_path, np.flip(io.imread(target_img_path), axis=1))
+
+                            flip_info = {
+                                'flipped': True,
+                                'violations': int(num_violations),
+                                'references_tried': int(num_matching + 1),
+                                'max_matching_error': hparams.max_matching_error,
+                            }
+
+                            # Save procrustes errors for reference and reset
+                            # with open(save_path_bulk + '_procrustes_violation.json', 'w') as f:
+                            #     json.dump(procrustes_errors, f, indent=2)
+                            procrustes_errors = []
+
+                        else:
+                            print('Flipping already done but laterality check still failed. Stopping matching to avoid infinite loop and including results for reference.')
+                            os.rmdir(save_path_base) 
+
+                        # Break current matching loop to restart with flipped image or stop if already flipped
+                        lat_abort = True
+                        matching_state += 1
+                        break
 
             # Finished the intended references without a laterality abort (works
             # whether the loop hit the count_ref_used cap or ran out of files)
@@ -324,12 +368,13 @@ def main(hparams, roma_model=None):
                 # AGREEMENT CALCULATION
                 # ------------------------
                 
-                # Landmarks are back in the original frame, so the overview has to be
-                # drawn on the original image, not on the mirrored working copy.
-                img_overview = io.imread(target_img_path) if flip_info is not None else img_target
-
-                # Create final results
-                prd_kpts_mean = agreement_analysis(hparams.save_path, img_overview, id_target, save_path_bulk, format='svg')
+                # Create final results. Landmarks are back in the original frame, so the
+                # overview is drawn on the original image, not on the mirrored working copy.
+                prd_kpts_stacked, prd_kpts_mean = consensus_landmarks(hparams.save_path, id_target)
+                if overlay:
+                    if img_overview is None:
+                        img_overview = io.imread(target_img_path)
+                    save_overlay(img_overview, prd_kpts_stacked, prd_kpts_mean, save_path_bulk, format='svg')
                 create_csv(prd_kpts_mean, save_path_bulk, test_split=0, val_split=0)
 
                 # Save laterality metrics
@@ -460,6 +505,12 @@ if __name__ == '__main__':
         "--skip_selfmatching",
         action="store_true",
         help="If set, skip self-matching. Default is False."
+    )
+
+    parent_parser.add_argument(
+        "--overlay",
+        action="store_true",
+        help="If set, also render the {target_id}_matches_bulk.svg overlay of all predictions. Default is False."
     )
 
     

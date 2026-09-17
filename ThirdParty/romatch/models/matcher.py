@@ -11,7 +11,7 @@ from PIL import Image
 
 from romatch.utils import get_tuple_transform_ops
 from romatch.utils.local_correlation import local_correlation
-from romatch.utils.utils import cls_to_flow_refine, get_autocast_params
+from romatch.utils.utils import cls_to_flow_refine, get_autocast_params, TupleResize
 from romatch.utils.kde import kde
 
 class ConvRefiner(nn.Module):
@@ -252,10 +252,11 @@ class GP(nn.Module):
         f = self.get_pos_enc(y)
         b, d, h2, w2 = f.shape
         x, y, f = self.reshape(x.float()), self.reshape(y.float()), self.reshape(f)
-        K_xx = self.K(x, x)
         K_yy = self.K(y, y)
         K_xy = self.K(x, y)
-        K_yx = K_xy.permute(0, 2, 1)
+        if not self.no_cov:  # K_xx / K_yx only feed the covariance branch
+            K_xx = self.K(x, x)
+            K_yx = K_xy.permute(0, 2, 1)
         sigma_noise = self.sigma_noise * torch.eye(h2 * w2, device=x.device)[None, :, :]
         with warnings.catch_warnings():
             K_yy_inv = torch.linalg.inv(K_yy + sigma_noise)
@@ -710,7 +711,119 @@ class RegressionMatcher(nn.Module):
                     warp[0],
                     certainty[0, 0],
                 )
-                
+
+    # ------------------------------------------------------------------
+    # Matching from pre-computed features.
+    #
+    # match() decodes, resizes and encodes both images for every pair. When one
+    # target is matched against many references, the methods below let the
+    # caller preprocess and encode every image once (references can be cached
+    # across targets). Together they reproduce match() for the symmetric,
+    # upsampling configuration used by roma_outdoor.
+    # ------------------------------------------------------------------
+
+    def resize_image(self, im):
+        """PIL image -> (coarse, upsample) uint8 CHW tensors, resized exactly as match() resizes."""
+        im = im.convert("RGB")
+        resized = []
+        for size in ((self.h_resized, self.w_resized), tuple(self.upsample_res)):
+            (im_r,) = TupleResize(size)((im,))
+            resized.append(torch.from_numpy(np.array(im_r, dtype=np.uint8).transpose((2, 0, 1)).copy()))
+        return resized
+
+    @staticmethod
+    def normalize_images(images_uint8):
+        """uint8 (B,3,H,W) -> network input; the same arithmetic as ToTensorScaled + Normalize."""
+        # ToTensorScaled's in-place `float32_array /= 255.0` divides in float64 and
+        # rounds the result to float32; a float32 division can differ by one ulp.
+        x = images_uint8.double().div_(255.0).float()
+        mean = torch.tensor([0.485, 0.456, 0.406], dtype=x.dtype, device=x.device).view(-1, 1, 1)
+        std = torch.tensor([0.229, 0.224, 0.225], dtype=x.dtype, device=x.device).view(-1, 1, 1)
+        return x.sub_(mean).div_(std)
+
+    @torch.inference_mode()
+    def encode_cnn(self, x):
+        """CNN feature pyramid (scales 1..8) of normalised images."""
+        return self.encoder(x, upsample=True)
+
+    @torch.inference_mode()
+    def encode_dino(self, x):
+        """Scale-16 DINOv2 features of normalised coarse images (as in CNNandDinov2.forward)."""
+        enc = self.encoder
+        B, C, H, W = x.shape
+        if enc.dinov2_vitl14[0].device != x.device:
+            enc.dinov2_vitl14[0] = enc.dinov2_vitl14[0].to(x.device).to(enc.amp_dtype)
+        feats = enc.dinov2_vitl14[0].forward_features(x.to(enc.amp_dtype))
+        return feats['x_norm_patchtokens'].permute(0, 2, 1).reshape(B, 1024, H // 14, W // 14)
+
+    @torch.inference_mode()
+    def match_from_features(self, feats_A, feats_B):
+        """Match K image pairs from pre-computed features.
+
+        feats_A / feats_B: {'coarse': pyramid incl. scale 16, 'fine': CNN pyramid at
+        upsample_res}. Batch size K, or 1 on either side to pair one image with all
+        K images of the other side.
+
+        Returns (warp [K, H, 2W, 4], certainty [K, H, 2W]). For K = 1, and CNN
+        features computed in a batch of 2 as match() computes them, the result is
+        bit-identical to match(); for K > 1 the kernels (and so the last bits) differ.
+        """
+        if not (self.symmetric and self.upsample_preds and self.attenuate_cert):
+            raise NotImplementedError("match_from_features supports the symmetric upsampling configuration only")
+        K = max(feats_A['coarse'][16].shape[0], feats_B['coarse'][16].shape[0])
+
+        def expand(t):
+            return t if t.shape[0] == K else t.expand(K, *t.shape[1:])
+
+        def symmetric_pyramids(pa, pb):
+            # Same ordering as forward_symmetric: queries (A, B), supports (B, A)
+            f_q = {s: torch.cat((expand(pa[s]), expand(pb[s])), dim=0) for s in pa}
+            f_s = {s: torch.cat((expand(pb[s]), expand(pa[s])), dim=0) for s in pa}
+            return f_q, f_s
+
+        f_q, f_s = symmetric_pyramids(feats_A['coarse'], feats_B['coarse'])
+        corresps = self.decoder(f_q, f_s, upsample=False, scale_factor=1)
+        del f_q, f_s
+
+        hs, ws = self.upsample_res
+        low_res_certainty = F.interpolate(
+            corresps[16]["certainty"], size=(hs, ws), align_corners=False, mode="bilinear"
+        )
+        cert_clamp = 0
+        factor = 0.5
+        low_res_certainty = factor*low_res_certainty*(low_res_certainty < cert_clamp)
+
+        finest_corresps = corresps[1]
+        scale_factor = math.sqrt(self.upsample_res[0] * self.upsample_res[1] / (self.w_resized * self.h_resized))
+        f_q, f_s = symmetric_pyramids(feats_A['fine'], feats_B['fine'])
+        corresps = self.decoder(f_q, f_s, upsample=True, scale_factor=scale_factor, **finest_corresps)
+        del f_q, f_s
+
+        im_A_to_im_B = corresps[1]["flow"]
+        certainty = corresps[1]["certainty"] - low_res_certainty
+        im_A_to_im_B = im_A_to_im_B.permute(0, 2, 3, 1)
+        im_A_coords = torch.meshgrid(
+            (
+                torch.linspace(-1 + 1 / hs, 1 - 1 / hs, hs, device=im_A_to_im_B.device),
+                torch.linspace(-1 + 1 / ws, 1 - 1 / ws, ws, device=im_A_to_im_B.device),
+            ),
+            indexing = 'ij'
+        )
+        im_A_coords = torch.stack((im_A_coords[1], im_A_coords[0]))
+        im_A_coords = im_A_coords[None].expand(K, 2, hs, ws)
+        certainty = certainty.sigmoid()  # logits -> probs
+        im_A_coords = im_A_coords.permute(0, 2, 3, 1)
+        if (im_A_to_im_B.abs() > 1).any():
+            wrong = (im_A_to_im_B.abs() > 1).sum(dim=-1) > 0
+            certainty[wrong[:,None]] = 0
+        im_A_to_im_B = torch.clamp(im_A_to_im_B, -1, 1)
+        A_to_B, B_to_A = im_A_to_im_B.chunk(2)
+        q_warp = torch.cat((im_A_coords, A_to_B), dim=-1)
+        s_warp = torch.cat((B_to_A, im_A_coords), dim=-1)
+        warp = torch.cat((q_warp, s_warp), dim=2)
+        certainty = torch.cat(certainty.chunk(2), dim=3)
+        return warp, certainty[:, 0]
+
     def visualize_warp(self, warp, certainty, im_A = None, im_B = None, 
                        im_A_path = None, im_B_path = None, device = "cuda", symmetric = True, save_path = None, unnormalize = False):
         #assert symmetric == True, "Currently assuming bidirectional warp, might update this if someone complains ;)"

@@ -152,7 +152,7 @@ def _run_pipeline(image_bytes, anatomy, projection, mpp, num_references, max_mat
             data_path=job['input_dir'],
             save_path=job['output_dir'],
             image_filetype=cfg['image_filetype'],
-            knn=15,
+            knn=15,  # nearest sampled matches averaged per landmark
             max_matching_error=cfg['max_matching_error'],
             coarse_res=COARSE_RES,
             upsample_res=UPSAMPLE_RES,

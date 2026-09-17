@@ -45,8 +45,9 @@ def main(hparams):
     kpt_paths = [k for k in kpt_paths if '_matches_bulk.csv' in k]
     print('Found {0} keypoint files'.format(len(kpt_paths)))
 
-    # Prepare measurment dict
-    measure_df = pd.DataFrame(columns=['ID'] + function_names)
+    # Collect one row per target; the DataFrame is built once at the end
+    # (growing it row by row copies the whole frame on every append)
+    measure_rows = []
 
 
     # ------------------------
@@ -68,11 +69,11 @@ def main(hparams):
             measure_value = measure_function(kpt_data)
             new_measure.append(float(measure_value))
 
-        # Append to dataframe
-        measure_df.loc[len(measure_df)] = new_measure
+        measure_rows.append(new_measure)
 
 
     # Save measurements
+    measure_df = pd.DataFrame(measure_rows, columns=['ID'] + function_names)
     measure_df.to_csv(os.path.join(hparams.save_path, f'measurements_{hparams.config_tag}.csv'), index=False, sep=';')
 
 
