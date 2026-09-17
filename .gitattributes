@@ -2,3 +2,7 @@
 # regardless of the developer's OS (a CRLF shell script breaks in bash).
 *.sh        text eol=lf
 Dockerfile  text eol=lf
+
+*.ipynb filter=nbstripout
+*.zpln filter=nbstripout
+*.ipynb diff=ipynb
