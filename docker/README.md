@@ -77,7 +77,7 @@ docker build -f docker/Dockerfile -t roma_medical:latest .
 
 # 2. configure: create service.env next to service.sh
 cat > service.env <<'ENV'
-API_KEY=choose-a-long-random-secret   # required on /process, /mcp, /upload
+API_KEY=choose-a-long-random-secret   # required on /process, /mcp, /upload, /recompute
 ROOT=/path/to/your/data-root          # holds model_weights/, refs/, the template
 PUBLIC_IP=your.server.host.or.ip      # used in the TLS cert and printed URLs
 GPUID=0
@@ -98,6 +98,7 @@ default) and routes by path. Clients then use these, with the `X-API-Key` header
 ```
 https://<PUBLIC_IP>/process    # REST
 https://<PUBLIC_IP>/mcp         # MCP (Streamable HTTP)
+https://<PUBLIC_IP>/recompute   # recompute from edited landmarks (JSON)
 ```
 
 Settings (env or `service.env`): `API_KEY`, `ROOT` (or `WEIGHTS_DIR`, `REFS_DIR`,
@@ -129,8 +130,8 @@ docker run -d --name roma-medical --gpus all -p 8000:8000 --shm-size 8g \
 
 ## Authentication
 
-Set `API_KEY` to require the `X-API-Key` header on `/process`, `/mcp`, and
-`/upload`. Leave it unset only for local use. `/health` stays open and reports
+Set `API_KEY` to require the `X-API-Key` header on `/process`, `/mcp`, `/upload`,
+and `/recompute`. Leave it unset only for local use. `/health` stays open and reports
 `auth_required`.
 
 ## REST API
@@ -175,9 +176,14 @@ Response:
   "anatomy": "knee", "projection": "lateral", "mpp": 0.148,
   "landmarks": [[x, y]],
   "measurements": {"<name>": 0.0},
-  "matching": {"num_references_used": 10, "mean_confidence": 0.9}
+  "matching": {"num_references_used": 10, "mean_confidence": 0.9},
+  "laterality_corrected": false
 }
 ```
+
+`laterality_corrected` is `true` when matching had to mirror a working copy of the
+image to align it with the reference set. The landmarks are mapped back either way,
+so they are always in the frame of the image you sent.
 
 A ready client is in [`client_example.py`](client_example.py):
 
@@ -222,7 +228,7 @@ Tools:
 
   | `status` | meaning | also includes |
   |----------|---------|---------------|
-  | `ok` | success | `measurements`, `landmarks`, `matching`, `result_token`, `visualizable_measurements` |
+  | `ok` | success | `measurements`, `landmarks`, `mode`, `mpp`, `matching`, `laterality_corrected`, `result_token`, `visualizable_measurements` |
   | `unsupported` | anatomy/projection not enabled | `supported`, `detail` |
   | `no_match` | no consensus (often wrong laterality/anatomy) | `detail` |
   | `unavailable` | service unreachable or not loaded | `detail` |
@@ -237,10 +243,26 @@ Tools:
   expires. Overlays are drawn on the same image the landmarks were computed in, so
   they stay aligned even when laterality was corrected internally. (The client must
   be able to render image results.)
+- `get_processed_image(result_token)` returns the exact radiograph the landmarks and
+  measurements were computed on, as an image. It is the prepared image (re-encoded to
+  the reference set's format), so it lines up with the returned `landmarks`. Use it
+  for downstream work that must match the pipeline's frame.
+- `update_landmarks(mode, mpp, landmarks, result_token?)` recomputes the measurements
+  and the construction geometry from (corrected) landmarks. It is stateless and
+  CPU-only, with no GPU work and no re-matching. It wraps `POST /recompute` (see
+  below), which is the better choice for interactive editing. Pass the optional
+  `result_token` to also update the stored landmarks, so `visualize_measurement`
+  renders the corrected construction.
 - `morphometry_health()` returns `{status, supported: [...]}`, where each entry is
-  `{anatomy, projection, measurements: [...]}`. It does no GPU work, so an agent can
-  call it up front to learn every supported anatomy/projection pair and the exact
-  measurement names each yields (the same names `visualize_measurement` accepts).
+  `{anatomy, projection, mode, measurements: [...], landmark_names: [...]}`. It does no
+  GPU work and everything in it is static per mode, so fetch it once and cache it. From
+  it an agent (or UI) learns every supported anatomy/projection pair, the exact
+  measurement names each yields (the names `visualize_measurement` accepts), and a
+  label for every landmark index. Only combinations whose reference set is present are
+  listed.
+
+Results (`result_token`) stay valid for an hour after their last use (`RESULT_TTL`),
+and at most `MAX_RESULTS` (200) are kept.
 
 Full example (needs `mcp`, `httpx`, `requests`):
 
@@ -275,6 +297,54 @@ print(asyncio.run(measure("target.jpg", "knee", "lateral")))
 ```
 
 You can hand this section to a coding agent to wire the tool into your framework.
+
+## Interactive landmark correction (`POST /recompute`)
+
+For a reader-in-the-loop step (drag a landmark, see the measurements update), call
+`POST /recompute` directly. It is a plain HTTPS route rather than only an MCP tool,
+because an MCP handshake per interaction is far too slow for a drag loop. It is
+stateless and CPU-only (no GPU, no re-matching, no disk, no re-render), so it is cheap
+to call repeatedly and survives a server restart.
+
+Take `mode` and `mpp` from a successful `get_morphometry`, send the (edited) landmarks,
+and get back the recomputed values plus the geometry to draw:
+
+```bash
+curl -k -X POST https://<PUBLIC_IP>/recompute -H "X-API-Key: <key>" \
+  -H "Content-Type: application/json" \
+  -d '{"mode": "knee_lateral", "mpp": 0.148, "landmarks": [[x, y], ...]}'
+```
+
+```json
+{
+  "status": "ok",
+  "measurements": {"Insall Salvati Ratio": 1.05},
+  "geometry": {
+    "Insall Salvati Ratio": {
+      "value": 1.05, "kind": "ratio", "unit": "",
+      "landmark_indices": [0, 2, 3],
+      "points": [[x, y]],
+      "solid_lines": [[[x, y], [x, y]]],
+      "dotted_lines": []
+    }
+  }
+}
+```
+
+Landmarks and all geometry are `[x, y]` in the frame of the **processed** image (the one
+`get_processed_image` returns), so they line up with what the reader sees. The values are
+computed by the same code as the pipeline. `landmark_indices` says which landmarks a
+measurement depends on (so a drag only needs to update the affected ones), and
+`landmark_names` from `morphometry_health` labels each draggable handle.
+
+The landmark count must match the mode (see `landmark_names` in `morphometry_health`).
+A wrong count or a NaN returns `400` with `{"status": "bad_input", "detail": ...}`. A
+measurement that cannot be computed from the given landmarks comes back as `null`.
+
+You can also pass the `result_token` from the same `get_morphometry`. The corrected
+landmarks are then stored, so a later `visualize_measurement` renders the corrected
+construction for export. This is best effort. If the token has expired, the
+recomputation still succeeds and only the server-rendered PNG is unavailable.
 
 ## Notes
 

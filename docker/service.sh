@@ -10,7 +10,7 @@
 #   ./service.sh start | stop | restart | status | logs | health
 #
 # Configure via a `service.env` file next to this script (recommended) or env vars:
-#   API_KEY=...           require this key on /process, /mcp, /upload (unset = no auth)
+#   API_KEY=...           require this key on /process, /mcp, /upload, /recompute (unset = no auth)
 #   ROOT=/path/to/data    folder holding model_weights/, refs/, and the template json
 #   PUBLIC_IP=host-or-ip  address clients use (goes into the TLS cert + printed URLs)
 #   GPUID=0               which GPU to pin
@@ -51,17 +51,18 @@ ensure_caddy_config() {
       -addext "subjectAltName=IP:${PUBLIC_IP},IP:127.0.0.1,DNS:localhost" 2>/dev/null
     echo "generated self-signed cert for ${PUBLIC_IP}"
   fi
-  # /mcp + /upload -> MCP server (with API-key gate if a key is set); else -> model REST
+  # /mcp + /upload + /recompute -> MCP server (with API-key gate if a key is set);
+  # everything else -> model REST
   local mcp_block
   if [ -n "${API_KEY:-}" ]; then
-    mcp_block="    @mcpapi path /mcp* /upload*
+    mcp_block="    @mcpapi path /mcp* /upload* /recompute*
     handle @mcpapi {
         @unauth not header X-API-Key ${API_KEY}
         respond @unauth \"unauthorized\" 401
         reverse_proxy ${MCP_NAME}:${MCP_PORT}
     }"
   else
-    mcp_block="    @mcpapi path /mcp* /upload*
+    mcp_block="    @mcpapi path /mcp* /upload* /recompute*
     handle @mcpapi {
         reverse_proxy ${MCP_NAME}:${MCP_PORT}
     }"

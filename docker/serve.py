@@ -179,6 +179,12 @@ def _run_pipeline(image_bytes, anatomy, projection, mpp, num_references, max_mat
             with open(job['image_path'], 'rb') as f:
                 processed_image_b64 = base64.b64encode(f.read()).decode()
 
+        # Did matching have to mirror a working copy to get here? do_matching maps the
+        # landmarks back either way, so this is a note for the reader, not a transform:
+        # it is read from the marker file, never by comparing image bytes.
+        laterality_corrected = os.path.exists(
+            os.path.join(job['output_dir'], f'{target_id}_matches_bulk_flipped.json'))
+
         # Per-reference Procrustes errors (matching confidence signal)
         procrustes = None
         procrustes_json = os.path.join(job['output_dir'], f'{target_id}_matches_bulk_procrustes.json')
@@ -214,6 +220,7 @@ def _run_pipeline(image_bytes, anatomy, projection, mpp, num_references, max_mat
         'mpp': cfg['mpp'],
         'landmarks': landmarks,
         'measurements': measurements,
+        'laterality_corrected': laterality_corrected,
         'matching': {
             'num_references_used': len(procrustes) if procrustes else None,
             'mean_confidence': confidence,

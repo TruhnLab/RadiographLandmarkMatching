@@ -115,6 +115,16 @@ def measurement_kind(name):
     return None
 
 
+# Unit per measurement kind, for callers that serialize values (the badge formats its
+# own units in _format_value).
+MEASUREMENT_UNITS = {'angle': '°', 'distance': 'mm', 'ratio': ''}
+
+
+def measurement_unit(name):
+    """Unit string for a measurement, by name ('°', 'mm', or '' for a ratio)."""
+    return MEASUREMENT_UNITS.get(measurement_kind(name), '')
+
+
 def _format_value(value, kind, ratio_ab=False):
     """Value string with a type-appropriate unit for the badge."""
     if value is None:
