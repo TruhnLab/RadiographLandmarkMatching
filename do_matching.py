@@ -330,8 +330,8 @@ def main(hparams, roma_model=None):
                             print('Flipping image horizontally to align with references. Deleting previous matching results and restarting matching with a mirrored working copy...')
                             del target  # release the features of the unmirrored image
 
-                            # Mirror into node-local scratch ($TMPDIR is per-job and cleaned
-                            # by the slurm epilog) rather than in place. PNG keeps it
+                            # Mirror into a scratch directory ($TMPDIR if set, else the system
+                            # temp dir) rather than in place. PNG keeps it
                             # lossless; re-encoding the source as JPEG would degrade it on
                             # every pass.
                             flip_scratch = tempfile.mkdtemp(prefix='roma_flip_',
