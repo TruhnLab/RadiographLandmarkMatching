@@ -1,5 +1,6 @@
 # Project Page
 This is the RadiographLandmarkMatching project page.
 
-#### Acknowledgements
-This page was built using the <a href="https://github.com/eliahuhorwitz/Academic-project-page-template" target="_blank">Academic Project Page Template</a> which was adopted from the <a href="https://nerfies.github.io" target="_blank">Nerfies</a> project page.
+It is a static page without build step or external dependencies (`index.html`, `static/css/site.css`, `static/js/site.js`)
+and shares its design with the lab's other project pages. To preview it locally, serve the folder, e.g.
+`python -m http.server`, and open http://localhost:8000.

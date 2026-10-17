@@ -1,644 +1,474 @@
-<!DOCTYPE html>
-<html>
-
+<!doctype html>
+<html lang="en">
 <head>
   <meta charset="utf-8">
-  <!-- Meta tags for social media banners, these should be filled in appropriatly as they are your "business card" -->
-  <!-- Replace the content tag with appropriate information -->
-  <meta name="description" content="DESCRIPTION META TAG">
-  <meta property="og:title" content="SOCIAL MEDIA TITLE TAG" />
-  <meta property="og:description" content="SOCIAL MEDIA DESCRIPTION TAG TAG" />
-  <meta property="og:url" content="URL OF THE WEBSITE" />
-  <!-- Path to banner image, should be in the path listed below. Optimal dimenssions are 1200X630-->
-  <meta property="og:image" content="static/image/your_banner_image.png" />
-  <meta property="og:image:width" content="1200" />
-  <meta property="og:image:height" content="630" />
-
-
-  <meta name="twitter:title" content="TWITTER BANNER TITLE META TAG">
-  <meta name="twitter:description" content="TWITTER BANNER DESCRIPTION META TAG">
-  <!-- Path to banner image, should be in the path listed below. Optimal dimenssions are 1200X600-->
-  <meta name="twitter:image" content="static/images/your_twitter_banner_image.png">
-  <meta name="twitter:card" content="summary_large_image">
-  <!-- Keywords for your paper to be indexed by-->
-  <meta name="keywords" content="KEYWORDS SHOULD BE PLACED HERE">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-
-
-  <title>Medical Landmark Matching</title>
+  <title>Universal Landmark Matching and Morphometry in Musculoskeletal Radiography</title>
+  <meta name="author" content="Dennis Eschweiler, Sven Nebelung">
+  <meta name="description" content="A zero-shot AI framework that transfers landmarks from one annotated reference radiograph to unseen radiographs by dense image matching, and derives musculoskeletal measurements from them without anatomy-specific training.">
+  <meta name="keywords" content="landmark matching, morphometry, musculoskeletal radiography, dense matching, RoMa, zero-shot, artificial intelligence">
+  <meta name="theme-color" content="#f1f3f7">
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="Universal Landmark Matching and Morphometry in Musculoskeletal Radiography">
+  <meta property="og:description" content="One annotated reference radiograph, dense AI matching, and automated measurements from head to toe, without anatomy-specific training.">
+  <meta property="og:url" content="https://truhnlab.github.io/RadiographLandmarkMatching/">
+  <meta property="og:image" content="https://truhnlab.github.io/RadiographLandmarkMatching/static/images/social_card.jpg">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta name="twitter:card" content="summary_large_image">
   <link rel="icon" type="image/x-icon" href="static/images/group_logo.ico">
-  <link href="https://fonts.googleapis.com/css?family=Google+Sans|Noto+Sans|Castoro" rel="stylesheet">
-
-  <link rel="stylesheet" href="static/css/bulma.min.css">
-  <link rel="stylesheet" href="static/css/bulma-carousel.min.css">
-  <link rel="stylesheet" href="static/css/bulma-slider.min.css">
-  <link rel="stylesheet" href="static/css/fontawesome.all.min.css">
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/jpswalsh/academicons@1/css/academicons.min.css">
-  <link rel="stylesheet" href="static/css/index.css">
-
-  <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
-  <script src="https://documentcloud.adobe.com/view-sdk/main.js"></script>
-  <script defer src="static/js/fontawesome.all.min.js"></script>
-  <script src="static/js/bulma-carousel.min.js"></script>
-  <script src="static/js/bulma-slider.min.js"></script>
-  <script src="static/js/index.js"></script>
+  <link rel="preload" href="static/fonts/inter-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="static/css/site.css?v=1">
+  <script>document.documentElement.classList.add('js');</script>
 </head>
-
 <body>
+  <header class="bar">
+    <div class="wide bar-inner">
+      <a class="lab" href="https://truhn.ai/" target="_blank" rel="noopener">
+        <img src="static/images/lab-logo.svg" alt="" width="30" height="30">
+        <span>Lab for Artificial Intelligence in Medicine</span>
+      </a>
+      <nav aria-label="On this page">
+        <a class="link" href="#anatomy">Anatomy</a>
+        <a class="link" href="#method">Method</a>
+        <a class="link" href="#inside">Inside</a>
+        <a class="link" href="#references">References</a>
+        <a class="link" href="#projects">Projects</a>
+        <a class="link" href="#citation">Citation</a>
+        <a class="btn small" href="https://github.com/TruhnLab/RadiographLandmarkMatching" target="_blank" rel="noopener">
+          <svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 0a8 8 0 0 0-2.53 15.59c.4.07.55-.17.55-.38v-1.33c-2.23.48-2.7-1.07-2.7-1.07-.36-.92-.89-1.17-.89-1.17-.73-.5.06-.49.06-.49.8.06 1.23.83 1.23.83.72 1.22 1.88.87 2.34.66.07-.52.28-.87.5-1.07-1.78-.2-3.65-.89-3.65-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82a7.6 7.6 0 0 1 4 0c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.28.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48v2.2c0 .21.15.46.55.38A8 8 0 0 0 8 0Z"/></svg>
+          Code
+        </a>
+      </nav>
+    </div>
+  </header>
 
+  <main id="main">
+    <!-- ======================= header and teaser ======================= -->
+    <section class="hero wide">
+      <a class="eyebrow" href="https://doi.org/10.1007/s00330-026-12555-y" target="_blank" rel="noopener">European Radiology &nbsp;·&nbsp; 2026</a>
+      <h1>An Artificial Intelligence Framework for <span class="name">Universal Landmark Matching</span> and Morphometry in Musculoskeletal Radiography</h1>
+      <p class="authors">
+        <span>Dennis Eschweiler<sup>1,2,*</sup></span>
+        <span>Eneko Cornejo Merodio<sup>1,2</sup></span>
+        <span>Felix Barajas Ordonez<sup>2</sup></span>
+        <span>Aleksandar Lichev<sup>1,2</sup></span>
+        <span>Nikol Ignatova<sup>1,2</sup></span>
+        <span>Marc Sebastian von der Stück<sup>2</sup></span>
+        <span>Christiane Kuhl<sup>2</sup></span>
+        <span>Daniel Truhn<sup>1,2</sup></span>
+        <span>Sven Nebelung<sup>1,2,*</sup></span>
+      </p>
+      <div class="affils">
+        <span><sup>1</sup>Lab for Artificial Intelligence in Medicine, Department of Diagnostic and Interventional Radiology, University Hospital RWTH Aachen, Aachen, Germany</span>
+        <span><sup>2</sup>Department of Diagnostic and Interventional Radiology, University Hospital RWTH Aachen, Aachen, Germany</span>
+        <span class="mail"><sup>*</sup><a href="mailto:deschweiler@ukaachen.de">deschweiler@ukaachen.de</a>, <a href="mailto:snebelung@ukaachen.de">snebelung@ukaachen.de</a></span>
+      </div>
+      <div class="links">
+        <a class="btn primary" href="https://doi.org/10.1007/s00330-026-12555-y" target="_blank" rel="noopener">
+          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" aria-hidden="true"><path d="M4 1.75h5.5L12.25 4.5v9.75H4z"/><path d="M9.25 1.75V4.75h3M6 8h4.25M6 10.75h4.25"/></svg>
+          Paper
+        </a>
+        <a class="btn" href="https://github.com/TruhnLab/RadiographLandmarkMatching" target="_blank" rel="noopener">
+          <svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 0a8 8 0 0 0-2.53 15.59c.4.07.55-.17.55-.38v-1.33c-2.23.48-2.7-1.07-2.7-1.07-.36-.92-.89-1.17-.89-1.17-.73-.5.06-.49.06-.49.8.06 1.23.83 1.23.83.72 1.22 1.88.87 2.34.66.07-.52.28-.87.5-1.07-1.78-.2-3.65-.89-3.65-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82a7.6 7.6 0 0 1 4 0c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.28.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48v2.2c0 .21.15.46.55.38A8 8 0 0 0 8 0Z"/></svg>
+          Code
+        </a>
+        <a class="btn" href="#projects">
+          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><circle cx="4" cy="4" r="1.75"/><circle cx="12" cy="6" r="1.75"/><circle cx="6.5" cy="12.25" r="1.75"/><path d="M5.6 4.6l4.8 1M11 7.4l-3.4 3.5"/></svg>
+          Downstream projects
+        </a>
+      </div>
 
-  <section class="hero">
-    <div class="hero-body" style="padding: 3rem 0 0 0;">
-      <div class="container is-max-desktop">
-        <div class="columns is-centered">
-          <div class="column has-text-centered">
-            <h1 class="title is-2 publication-title">An Artificial Intelligence Framework for Universal Landmark
-              Matching and Morphometry in Musculoskeletal Radiography</h1>
-            <div class="is-size-5 publication-authors">
-              <!-- Paper authors -->
-              <span class="author-block">
-                Dennis Eschweiler<sup>1,2,*</sup>,</span>
-              <span class="author-block">
-                Eneko Cornejo Merodio<sup>1,2</sup>,</span>
-              <span class="author-block">
-                Felix Barajas Ordonez<sup>2</sup>,</span>
-              <span class="author-block">
-                Aleksandar Lichev<sup>1,2</sup>,</span>
-              <span class="author-block">
-                Nikol Ignatova<sup>1,2</sup>,</span>
-              <span class="author-block">
-                Marc Sebastian von der Stück<sup>2</sup>,</span>
-              <span class="author-block">
-                Christiane Kuhl<sup>2</sup>,</span>
-              <span class="author-block">
-                Daniel Truhn<sup>1,2</sup>,</span>
-              <span class="author-block">
-                Sven Nebelung<sup>1,2,*</sup></span>
-            </div>
-
-            <div class="is-size-6 publication-authors"><br>
-              <span class="author-block"><sup>1</sup>Lab for Artificial Intelligence in Medicine, Department of Diagnostic and Interventional Radiology, University
-                Hospital RWTH Aachen, Aachen, Germany</span>
-              <span class="author-block"><sup>2</sup>Department of Diagnostic and Interventional Radiology, University
-                Hospital RWTH Aachen, Aachen, Germany</span>
-              <span class="eql-cntrb"><br><sup>*</sup>{deschweiler,snebelung}@ukaachen.de</span>
-            </div><br>
-
-            <div class="column has-text-centered">
-              <div class="publication-links">
-                <!-- Arxiv PDF link -->
-                <span class="link-block">
-                  <a href="https://doi.org/10.1007/s00330-026-12555-y" target="_blank" class="external-link button is-normal is-rounded is-dark">
-                    <span class="icon">
-                      <i class="fas fa-file-pdf"></i>
-                    </span>
-                    <span>Paper</span>
-                  </a>
-                </span>
-
-                <!-- Github link -->
-                <span class="link-block">
-                  <a href="https://github.com/TruhnLab/RadiographLandmarkMatching" target="_blank"
-                    class="external-link button is-normal is-rounded is-dark">
-                    <span class="icon">
-                      <i class="fab fa-github"></i>
-                    </span>
-                    <span>Code</span>
-                  </a>
-                </span>
-
-                <!-- Team link -->
-                <span class="link-block">
-                  <a href="https://aimedicine.rwth-aachen.de/" target="_blank"
-                    class="external-link button is-normal is-rounded is-dark">
-                    <span class="icon">
-                      <i class="fas fa-users"></i>
-                    </span>
-                    <span>Team</span>
-                  </a>
-                </span>
-
-                <!-- Team link -->
-                <span class="link-block">
-                  <a href="https://www.ukaachen.de/kliniken-institute/klinik-fuer-diagnostische-und-interventionelle-radiologie/forschung/labor-fuer-kuenstliche-intelligenz-in-der-medizin/"
-                    target="_blank" class="external-link button is-normal is-rounded is-dark">
-                    <span class="icon">
-                      <i class="fa fa-building"></i>
-                    </span>
-                    <span>Department</span>
-                  </a>
-                </span>
-                
-              </div>
-            </div>
+      <figure class="teaser settle">
+        <div class="float">
+          <div class="stage" id="stage" title="Click to pause or play">
+            <video class="on" src="static/videos/feet_ap.mp4" poster="static/images/posters/feet_ap.jpg" autoplay muted loop playsinline preload="auto"
+                   aria-label="Live landmark matching on two anteroposterior foot radiographs"></video>
+            <video src="static/videos/feet_lateral.mp4" poster="static/images/posters/feet_lateral.jpg" muted playsinline preload="metadata"
+                   aria-label="Live landmark matching on two lateral foot radiographs"></video>
+            <video src="static/videos/leg.mp4" poster="static/images/posters/leg.jpg" muted playsinline preload="metadata"
+                   aria-label="Live landmark matching on two anteroposterior knee radiographs"></video>
+            <video src="static/videos/knee.mp4" poster="static/images/posters/knee.jpg" muted playsinline preload="metadata"
+                   aria-label="Live landmark matching on two axial knee radiographs"></video>
+            <span class="paused" aria-hidden="true"><svg viewBox="0 0 16 16"><path d="M4 2.5v11l9-5.5z"/></svg></span>
+          </div>
+          <div class="halves">
+            <span><b>Reference</b><i>a point is moved by hand</i></span>
+            <span><b>Target</b><i>the matched point follows in real time</i></span>
           </div>
         </div>
+        <ol class="chapters" id="chapters" aria-label="Views in the recording">
+          <li><button type="button" class="on"><span class="n">1</span>Foot AP<span class="fill"></span></button></li>
+          <li><button type="button"><span class="n">2</span>Foot lateral<span class="fill"></span></button></li>
+          <li><button type="button"><span class="n">3</span>Knee AP<span class="fill"></span></button></li>
+          <li><button type="button"><span class="n">4</span>Knee axial<span class="fill"></span></button></li>
+        </ol>
+        <figcaption class="note center">Once the dense correspondence between a reference and a target radiograph is established, landmark
+          matching runs in real time. A set of landmarks defined once on the reference can be mapped onto every radiograph of a cohort,
+          and the measurements built on them follow automatically.</figcaption>
+      </figure>
+
+      <ul class="facts" aria-label="Key facts">
+        <li><b>1</b>annotated reference radiograph to start from</li>
+        <li><b>0</b>anatomy-specific training</li>
+        <li><b>16</b>measurements in shoulder, knee and foot</li>
+        <li><b>2.15<small> mm</small></b>mean landmark error with 40 reference radiographs</li>
+      </ul>
+    </section>
+
+    <!-- ======================= overview: abstract and scope, on a band ======================= -->
+    <div class="band">
+    <section class="abstract wide">
+      <div class="narrow reveal">
+        <h2 class="small">Abstract</h2>
+        <p>This study presents a zero-shot artificial intelligence (AI)-based approach for automated landmark matching in
+          radiographs, designed to improve scalability and reliability in deriving musculoskeletal (MSK) measurements across
+          various anatomic regions and conditions. Key anatomic landmarks were manually identified under expert supervision,
+          building the basis to automatically derive pertinent angle and distance measurements. Using one patient's radiograph
+          as a reference, a robust AI-based feature matching approach establishes dense matches between the reference and
+          unseen target images. Reference landmarks are transferred along the dense matching, resulting in precise landmark
+          placement and automated calculation of MSK measurements within an entire patient cohort. The results demonstrate
+          versatile and robust application without requiring anatomy-specific training, while radiographs with
+          orthopedic implants remain challenging for some measurements.</p>
       </div>
+    </section>
+
+    <!-- ======================= from head to toe ======================= -->
+    <section id="anatomy" class="wide">
+      <div class="split">
+        <figure class="float settle">
+          <img src="static/images/skelet.svg" width="585" height="600" loading="lazy"
+               alt="A skeleton with the measurements of the study at the shoulder, the knee and the foot.">
+        </figure>
+        <div class="reveal">
+          <p class="kicker">A single AI framework for universal application</p>
+          <h2>From head to toe</h2>
+          <p class="explain">Artificial intelligence (AI) has shown great potential in assisting radiologists with
+            musculoskeletal (MSK) assessments across various anatomical regions<sup><a href="https://pubmed.ncbi.nlm.nih.gov/36766600/" target="_blank" rel="noopener">1</a>,<a href="https://pubmed.ncbi.nlm.nih.gov/37964028/" target="_blank" rel="noopener">2</a>,<a href="https://pubmed.ncbi.nlm.nih.gov/34773485/" target="_blank" rel="noopener">3</a>,<a href="https://pubmed.ncbi.nlm.nih.gov/37566272/" target="_blank" rel="noopener">4</a></sup>.
+            However, most existing tools are narrowly tailored for specific anatomies or rely on segmentation-based methods
+            as a basis. To address these limitations, we propose a versatile and generalist AI-based approach for landmark
+            matching. In contrast to typical generalist landmark matching approaches that depend on automatically identified,
+            optimally descriptive landmarks<sup><a href="https://arxiv.org/abs/1911.11763" target="_blank" rel="noopener">5</a>,<a href="https://arxiv.org/abs/2306.13643" target="_blank" rel="noopener">6</a>,<a href="https://arxiv.org/abs/2104.00680" target="_blank" rel="noopener">7</a></sup>,
+            our use-case has to be based on manually selected landmarks tailored for MSK measurements.</p>
+          <p class="explain">As these landmarks are potentially suboptimal for precise matching, we employ an AI-based
+            method<sup><a href="https://parskatt.github.io/RoMa/" target="_blank" rel="noopener">8</a></sup> that first
+            performs multi-scale dense image matching between the reference and target images independently of the
+            landmarks. Landmark positions are then transferred to the target image along these correspondences. The approach
+            is anatomy-agnostic, so the same backbone model serves a wide range of anatomical regions and MSK
+            measurements. For more detailed information we refer to our paper.</p>
+          <ul class="views" aria-label="Radiographic views in the study">
+            <li>Shoulder<span>AP</span></li>
+            <li>Knee<span>AP</span></li>
+            <li>Knee<span>lateral</span></li>
+            <li>Knee<span>axial</span></li>
+            <li>Foot<span>AP</span></li>
+            <li>Foot<span>lateral</span></li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
     </div>
-  </section>
 
-  <!-- Accompanying & Downstream Projects -->
-  <section class="section hero is-small downstream-section" style="padding-top: 1.5rem; padding-bottom: 1rem;">
-    <div class="container">
+    <!-- ======================= method ======================= -->
+    <section id="method" class="wide">
+      <div class="head center narrow reveal">
+        <h2>How it works</h2>
+      </div>
+      <!-- hiw:start -->
+      <figure class="float overview hiw settle" id="hiw">
+        <div class="scroll">
+          <svg viewBox="0 0 960 452" role="img" aria-labelledby="hiwTitle" font-family="inherit">
+            <title id="hiwTitle">Schematic of the method on a lateral knee. Landmarks are placed once on a reference
+              radiograph. A shared encoder reads the reference and a target radiograph, and every position of the
+              reference is matched to the target. The landmarks follow these matches to the target, where the
+              Insall-Salvati ratio is drawn from them. The same happens for every further radiograph of the cohort.</title>
+            <defs>
+              <path id="hiw-fibula" d="M96.70 229.27 L92.22 158.09 L91.43 146.58 L90.73 137.93 L90.10 131.40 L89.62 127.67 L88.66 122.25 L87.95 119.16 L87.12 116.59 L86.25 114.78 L85.27 113.54 L84.40 112.94 L81.49 111.81 L78.37 110.36 L72.60 107.24 L75.31 84.00 L86.76 80.78 L88.53 83.54 L90.07 86.55 L91.19 89.41 L91.95 92.27 L92.20 93.89 L92.29 95.27 L92.11 99.33 L92.17 102.19 L92.69 107.56 L93.32 111.64 L94.16 116.11 L97.10 129.71 L97.72 134.01 L98.20 138.90 L98.71 147.51 L98.94 156.93 L98.94 229.47 Z"/>
+              <path id="hiw-tibia" d="M85.25 229.94 L86.85 159.32 L86.83 151.28 L86.58 144.72 L86.09 137.91 L85.30 131.13 L83.80 122.00 L83.12 116.86 L82.64 111.11 L82.53 105.66 L82.75 100.69 L83.26 96.28 L84.08 91.97 L85.68 86.04 L86.48 82.42 L87.01 78.71 L87.14 75.43 L86.99 73.48 L86.65 71.72 L86.13 70.22 L85.39 68.93 L84.47 67.92 L83.42 67.22 L82.17 66.78 L80.75 66.63 L78.92 66.86 L77.17 67.45 L76.00 68.17 L73.27 70.35 L71.70 71.34 L69.45 72.39 L66.38 73.39 L63.13 74.12 L59.10 74.73 L55.16 75.12 L49.66 75.47 L47.61 75.70 L45.22 76.16 L43.00 76.84 L41.74 77.39 L40.72 77.95 L39.73 78.66 L38.92 79.42 L38.22 80.28 L37.69 81.20 L37.31 82.18 L37.09 83.16 L36.98 84.22 L37.01 85.27 L37.38 87.41 L38.26 89.90 L39.73 92.76 L40.77 96.53 L41.32 99.61 L41.45 101.51 L41.34 103.09 L41.00 104.31 L40.18 106.32 L40.02 107.04 L40.03 107.88 L40.26 108.81 L41.18 110.77 L42.92 113.48 L45.33 116.77 L49.50 122.11 L50.84 124.01 L51.95 126.05 L52.39 127.68 L53.21 136.48 L53.62 144.94 L53.71 159.11 L55.11 230.11 Z"/>
+              <path id="hiw-femur" d="M28.50 -69.79 L33.21 0.74 L33.26 2.96 L33.14 5.34 L32.74 8.59 L32.10 11.70 L31.14 14.95 L30.01 17.80 L28.83 20.22 L27.52 22.46 L26.46 24.04 L23.94 27.44 L22.46 29.76 L21.16 32.24 L20.14 34.74 L19.37 37.44 L18.95 40.10 L18.89 42.58 L19.16 45.11 L19.62 47.06 L20.36 49.10 L21.27 50.95 L22.43 52.79 L23.79 54.54 L25.38 56.24 L27.14 57.84 L29.07 59.33 L32.07 61.30 L33.93 62.71 L36.18 64.19 L38.71 65.64 L41.42 66.95 L44.37 68.12 L47.36 69.02 L50.31 69.61 L53.16 69.90 L55.01 69.92 L56.96 69.80 L58.79 69.55 L60.65 69.14 L62.32 68.63 L64.10 67.94 L65.82 67.12 L67.33 66.25 L69.04 65.10 L70.62 63.86 L72.02 62.57 L73.17 61.32 L74.15 60.01 L74.96 58.64 L75.56 57.29 L76.01 55.77 L76.26 53.67 L76.10 51.46 L75.50 49.16 L74.48 46.89 L73.23 44.87 L71.76 43.00 L70.15 41.31 L67.74 39.18 L65.88 37.01 L64.92 35.62 L64.06 34.16 L62.70 31.18 L61.70 27.89 L61.13 24.55 L60.89 20.65 L61.00 16.26 L61.33 12.68 L61.82 9.27 L62.57 5.38 L63.43 1.88 L83.81 -67.07 Z"/>
+              <path id="hiw-patella" d="M9.55 34.99 L6.98 36.23 L4.59 37.69 L2.71 39.14 L1.40 40.52 L0.58 41.82 L0.21 43.08 L0.18 43.77 L0.44 46.88 L1.04 51.28 L1.95 55.47 L3.25 59.60 L4.73 63.11 L6.50 66.36 L8.71 69.53 L11.30 72.46 L12.28 73.71 L12.88 74.13 L13.55 74.25 L14.33 73.95 L15.16 73.13 L17.36 69.84 L18.55 67.77 L19.25 66.18 L19.72 64.61 L19.93 63.14 L19.90 61.66 L19.48 59.70 L17.38 54.68 L15.52 48.72 L14.39 44.42 L13.30 39.74 L13.07 38.38 L12.95 36.64 L12.70 35.67 L12.22 34.91 L11.53 34.55 L10.64 34.58 L9.55 34.99 Z"/>
+              <clipPath id="hiwClipRef"><rect x="16" y="16" width="300" height="398" rx="18"/></clipPath>
+              <clipPath id="hiwClipTgt"><rect x="616" y="16" width="300" height="398" rx="18"/></clipPath>
+              <radialGradient id="hiwFilm" cx="50%" cy="45%" r="75%"><stop offset="0" stop-color="#1b2639"/><stop offset="1" stop-color="#070b14"/></radialGradient>
+              <linearGradient id="hiwScanGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#7a9cff" stop-opacity="0"/><stop offset=".8" stop-color="#7a9cff" stop-opacity=".22"/><stop offset="1" stop-color="#b9caff" stop-opacity=".7"/></linearGradient>
+              <filter id="hiwBlur" x="-20%" y="-20%" width="140%" height="140%"><feGaussianBlur stdDeviation="9"/></filter>
+              <filter id="hiwSoft" x="-20%" y="-20%" width="140%" height="160%"><feDropShadow dx="0" dy="8" stdDeviation="10" flood-color="#0e1626" flood-opacity=".14"/></filter>
+            </defs>
 
-      <h2 class="title is-5 downstream-section-title">
-        <span class="icon"><i class="fas fa-project-diagram"></i></span>
-        <span>Accompanying &amp; Downstream Projects</span>
-      </h2>
+            <!-- further radiographs of the cohort, behind the target -->
+            <rect class="ghost" x="648" y="-4" width="300" height="398" rx="18"/>
+            <rect class="ghost" x="632" y="6" width="300" height="398" rx="18"/>
+            
+            <g class="panel" id="hiwRef">
+              <rect class="film" x="16" y="16" width="300" height="398" rx="18"/>
+              <g clip-path="url(#hiwClipRef)">
+                <g class="tissue" filter="url(#hiwBlur)"><use href="#hiw-fibula" data-bone="fibula"/><use href="#hiw-tibia" data-bone="tibia"/><use href="#hiw-femur" data-bone="femur"/><use href="#hiw-patella" data-bone="patella"/></g>
+                <g class="bones"><use href="#hiw-fibula" data-bone="fibula"/><use href="#hiw-tibia" data-bone="tibia"/><use href="#hiw-femur" data-bone="femur"/><use href="#hiw-patella" data-bone="patella"/></g>
+                <rect class="scan" x="16" y="16" width="300" height="70"/>
+              </g>
+              <text class="cap" x="166" y="440" text-anchor="middle"><tspan class="name" id="hiwRefCap">Reference</tspan><tspan class="sub" dx="8" id="hiwRefSub">annotated once</tspan></text>
+            </g>
+            
+            <g class="panel" id="hiwTgt">
+              <rect class="film" x="616" y="16" width="300" height="398" rx="18"/>
+              <g clip-path="url(#hiwClipTgt)">
+                <g class="tissue" filter="url(#hiwBlur)"><path data-bone="fibula"/><path data-bone="tibia"/><path data-bone="femur"/><path data-bone="patella"/></g>
+                <g class="bones"><path data-bone="fibula"/><path data-bone="tibia"/><path data-bone="femur"/><path data-bone="patella"/></g><g class="implant"><path/><path/><path/><path/><path/></g>
+                <rect class="scan" x="616" y="16" width="300" height="70"/>
+              </g>
+              <text class="cap" x="766" y="440" text-anchor="middle"><tspan class="name" id="hiwTgtCap">Target 1</tspan><tspan class="sub" dx="8" id="hiwTgtSub">not annotated</tspan></text>
+            </g>
 
-      <!-- Horizontal, drag-scrollable rail of project tiles -->
-      <div class="project-rail">
-        <button class="rail-nav is-prev" type="button" aria-label="Show previous projects" hidden>
-          <i class="fas fa-chevron-left"></i>
+            <!-- the dense matches pass behind the encoder -->
+            <g id="hiwDots" class="dots"></g>
+
+            <!-- the shared encoder between the two -->
+            <g class="wires"><path id="hiwWireA" d="M316 215 H378"/><path id="hiwWireB" d="M616 215 H554"/></g>
+            <g class="enc" id="hiwEnc" filter="url(#hiwSoft)">
+              <rect class="card" x="378" y="172" width="176" height="86" rx="16"/>
+              <g class="planes" transform="translate(414 215)">
+                <path d="M-22 6 L0 -4 L22 6 L0 16 Z"/><path d="M-17 -2 L0 -10 L17 -2 L0 6 Z"/><path d="M-11 -9 L0 -14 L11 -9 L0 -4 Z"/>
+              </g>
+              <text class="title" x="446" y="209">Shared</text>
+              <text class="title" x="446" y="228">encoder</text>
+              <text class="sub" x="466" y="249" text-anchor="middle">multi-scale features</text>
+            </g>
+            <g class="status" id="hiwStatus"><rect x="336" y="33" width="260" height="34" rx="17"/><text x="466" y="55" text-anchor="middle"></text></g>
+
+            <g id="hiwRefCons" class="cons" clip-path="url(#hiwClipRef)"></g>
+            <g id="hiwTgtCons" class="cons" clip-path="url(#hiwClipTgt)"></g>
+            <g id="hiwTrails" class="trails"></g>
+            <g id="hiwMarks" class="marks"></g>
+          </svg>
+        </div>
+        <p class="swipe">Swipe to see the whole figure.</p>
+        <ol class="stages" id="hiwStages">
+          <li><h3><span>1</span>Annotate once</h3><p>An expert places the landmarks of the measurements on a single reference
+            radiograph. The rest of the cohort stays unannotated.</p></li>
+          <li><h3><span>2</span>Match densely</h3><p>One shared encoder of transformers and convolutional layers reads both
+            radiographs at multiple scales, and every position of the reference is matched to the target, independently of
+            the landmarks.</p></li>
+          <li><h3><span>3</span>Transfer and measure</h3><p>The landmarks follow the dense matches to every target, where the
+            redundancy of the matching stabilizes their final position. The measurements follow automatically.</p></li>
+        </ol>
+        <script type="application/json" id="hiwData">{"landmarks":[{"name":"Patella, superior pole","bone":"patella","p":[11.623,34.636]},{"name":"Patella, inferior pole","bone":"patella","p":[13.523,73.769]},{"name":"Patella, inferior end of the articular surface","bone":"patella","p":[20.061,61.847]},{"name":"Tibial tuberosity","bone":"tibia","p":[40.463,105.841]},{"name":"Tibial plateau, anterior","bone":"tibia","p":[40.737,77.674]},{"name":"Tibial plateau, posterior","bone":"tibia","p":[80.82,66.594]}],"grid":[[36.2,20.0,"femur"],[42.4,20.0,"femur"],[48.6,20.0,"femur"],[54.8,20.0,"femur"],[26.9,25.37,"femur"],[33.1,25.37,"femur"],[39.3,25.37,"femur"],[45.5,25.37,"femur"],[51.7,25.37,"femur"],[57.9,25.37,"femur"],[23.8,30.74,"femur"],[30.0,30.74,"femur"],[36.2,30.74,"femur"],[42.4,30.74,"femur"],[48.6,30.74,"femur"],[54.8,30.74,"femur"],[61.0,30.74,"femur"],[8.3,36.11,"patella"],[20.7,36.11,"femur"],[26.9,36.11,"femur"],[33.1,36.11,"femur"],[39.3,36.11,"femur"],[45.5,36.11,"femur"],[51.7,36.11,"femur"],[57.9,36.11,"femur"],[5.2,41.48,"patella"],[11.4,41.48,"patella"],[23.8,41.48,"femur"],[30.0,41.48,"femur"],[36.2,41.48,"femur"],[42.4,41.48,"femur"],[48.6,41.48,"femur"],[54.8,41.48,"femur"],[61.0,41.48,"femur"],[67.2,41.48,"femur"],[2.1,46.85,"patella"],[8.3,46.85,"patella"],[14.5,46.85,"patella"],[26.9,46.85,"femur"],[33.1,46.85,"femur"],[39.3,46.85,"femur"],[45.5,46.85,"femur"],[51.7,46.85,"femur"],[57.9,46.85,"femur"],[64.1,46.85,"femur"],[70.3,46.85,"femur"],[5.2,52.22,"patella"],[11.4,52.22,"patella"],[23.8,52.22,"femur"],[30.0,52.22,"femur"],[36.2,52.22,"femur"],[42.4,52.22,"femur"],[48.6,52.22,"femur"],[54.8,52.22,"femur"],[61.0,52.22,"femur"],[67.2,52.22,"femur"],[73.4,52.22,"femur"],[8.3,57.58,"patella"],[14.5,57.58,"patella"],[33.1,57.58,"femur"],[39.3,57.58,"femur"],[45.5,57.58,"femur"],[51.7,57.58,"femur"],[57.9,57.58,"femur"],[64.1,57.58,"femur"],[70.3,57.58,"femur"],[11.4,62.95,"patella"],[17.6,62.95,"patella"],[42.4,62.95,"femur"],[48.6,62.95,"femur"],[54.8,62.95,"femur"],[61.0,62.95,"femur"],[67.2,62.95,"femur"],[14.5,68.32,"patella"],[51.7,68.32,"femur"],[57.9,68.32,"femur"],[82.7,68.32,"tibia"],[73.4,73.69,"tibia"],[79.6,73.69,"tibia"],[45.5,79.06,"tibia"],[51.7,79.06,"tibia"],[57.9,79.06,"tibia"],[64.1,79.06,"tibia"],[70.3,79.06,"tibia"],[76.5,79.06,"tibia"],[82.7,79.06,"tibia"],[42.4,84.43,"tibia"],[48.6,84.43,"tibia"],[54.8,84.43,"tibia"],[61.0,84.43,"tibia"],[67.2,84.43,"tibia"],[73.4,84.43,"tibia"],[79.6,84.43,"fibula"],[85.8,84.43,"fibula"],[45.5,89.8,"tibia"],[51.7,89.8,"tibia"],[57.9,89.8,"tibia"],[64.1,89.8,"tibia"],[70.3,89.8,"tibia"],[76.5,89.8,"fibula"],[82.7,89.8,"fibula"],[88.9,89.8,"fibula"],[42.4,95.17,"tibia"],[48.6,95.17,"tibia"],[54.8,95.17,"tibia"],[61.0,95.17,"tibia"],[67.2,95.17,"tibia"],[73.4,95.17,"tibia"],[79.6,95.17,"fibula"],[85.8,95.17,"fibula"],[45.5,100.54,"tibia"],[51.7,100.54,"tibia"],[57.9,100.54,"tibia"],[64.1,100.54,"tibia"],[70.3,100.54,"tibia"],[76.5,100.54,"fibula"],[82.7,100.54,"fibula"],[88.9,100.54,"fibula"],[42.4,105.91,"tibia"],[48.6,105.91,"tibia"],[54.8,105.91,"tibia"],[61.0,105.91,"tibia"],[67.2,105.91,"tibia"],[73.4,105.91,"fibula"],[79.6,105.91,"fibula"],[85.8,105.91,"fibula"],[92.0,105.91,"fibula"],[45.5,111.28,"tibia"],[51.7,111.28,"tibia"],[57.9,111.28,"tibia"],[64.1,111.28,"tibia"],[70.3,111.28,"tibia"],[76.5,111.28,"tibia"],[82.7,111.28,"fibula"],[88.9,111.28,"fibula"],[48.6,116.65,"tibia"],[54.8,116.65,"tibia"],[61.0,116.65,"tibia"],[67.2,116.65,"tibia"],[73.4,116.65,"tibia"],[79.6,116.65,"tibia"],[92.0,116.65,"fibula"],[51.7,122.01,"tibia"],[57.9,122.01,"tibia"],[64.1,122.01,"tibia"],[70.3,122.01,"tibia"],[76.5,122.01,"tibia"],[95.1,122.01,"fibula"],[54.8,127.38,"tibia"],[61.0,127.38,"tibia"],[67.2,127.38,"tibia"],[73.4,127.38,"tibia"],[79.6,127.38,"tibia"],[92.0,127.38,"fibula"],[57.9,132.75,"tibia"],[64.1,132.75,"tibia"],[70.3,132.75,"tibia"],[76.5,132.75,"tibia"],[82.7,132.75,"tibia"],[95.1,132.75,"fibula"],[54.8,138.12,"tibia"],[61.0,138.12,"tibia"],[67.2,138.12,"tibia"],[73.4,138.12,"tibia"],[79.6,138.12,"tibia"],[57.9,143.49,"tibia"],[64.1,143.49,"tibia"],[70.3,143.49,"tibia"],[76.5,143.49,"tibia"],[82.7,143.49,"tibia"],[95.1,143.49,"fibula"],[54.8,148.86,"tibia"],[61.0,148.86,"tibia"],[67.2,148.86,"tibia"],[73.4,148.86,"tibia"],[79.6,148.86,"tibia"],[85.8,148.86,"tibia"],[92.0,148.86,"fibula"]]}</script>
+      </figure>
+      <p class="note center hiw-note">Schematic, drawn from the lateral-knee measurement definitions of the paper. The landmarks
+        and the Insall-Salvati ratio stand in for every view and measurement.</p>
+      <!-- hiw:end -->
+      <div class="step-extra reveal">
+        <h3>Inference service <em>Self-hosted</em></h3>
+        <p>The pipeline also runs as a Docker service on your own GPU machine, with a REST endpoint and an MCP server for AI
+          agents. The <a href="https://truhnlab.github.io/RadiographMorphometryAgent/" target="_blank" rel="noopener">Radiograph
+          Morphometry Agent</a> takes all of its measurements from it.</p>
+      </div>
+    </section>
+
+    <!-- ======================= behind the curtain ======================= -->
+    <section id="inside" class="wide">
+      <div class="head center narrow reveal">
+        <p class="kicker">Visualizing the inner workings</p>
+        <h2>Behind the curtain</h2>
+        <p class="explain">The process of establishing a dense match between two images relies on abstract feature
+          representations for each position in both the reference and target images. To better understand which information
+          is encoded by the AI, we examined the feature similarities between a specific position within the reference image
+          and the entire target image. Our findings show that the AI captures both semantic and texture features. The matching
+          process utilizes this encoded information, along with precise positional data, to create a reliable mapping between
+          the images.</p>
+      </div>
+      <div class="tabs reveal">
+        <div class="seg" role="tablist" aria-label="Radiographic view" id="heatTabs">
+          <span class="pill" aria-hidden="true"></span>
+          <button type="button" role="tab" aria-selected="true" data-set="shoulder" data-n="3" data-view="shoulder">Shoulder AP</button>
+          <button type="button" role="tab" aria-selected="false" data-set="knee" data-n="3" data-view="knee">Knee AP</button>
+          <button type="button" role="tab" aria-selected="false" data-set="patella" data-n="3" data-view="axial knee">Knee axial</button>
+          <button type="button" role="tab" aria-selected="false" data-set="feetap" data-n="3" data-view="foot">Foot AP</button>
+          <button type="button" role="tab" aria-selected="false" data-set="feetlat" data-n="3" data-view="lateral foot">Foot lateral</button>
+        </div>
+      </div>
+      <figure class="float heat settle" id="heatView" role="tabpanel">
+        <div class="frame">
+          <img class="on" src="static/images/heatmap_shoulder_1.png" width="1582" height="790"
+               alt="Left, a shoulder radiograph with one position marked in red. Right, a second shoulder radiograph overlaid with the similarity of every position to the marked one.">
+          <img alt="" aria-hidden="true">
+        </div>
+        <div class="halves">
+          <span><b>Reference</b><i>the queried position</i></span>
+          <span><b>Target</b><i>feature similarity to it, bright is similar</i></span>
+        </div>
+      </figure>
+      <div class="heat-foot">
+        <div class="dots" id="heatDots" aria-label="Examples"></div>
+        <button type="button" class="auto" id="heatAuto" aria-pressed="false"><svg class="i-pause" viewBox="0 0 16 16" aria-hidden="true"><path d="M4 2.5h3v11H4zM9 2.5h3v11H9z"/></svg><svg class="i-play" viewBox="0 0 16 16" aria-hidden="true"><path d="M4 2.5v11l9-5.5z"/></svg><span>Pause</span></button>
+      </div>
+    </section>
+
+    <!-- ======================= from novice to expert ======================= -->
+    <section id="references" class="wide">
+      <div class="head center narrow reveal">
+        <p class="kicker">Annotation through imitation</p>
+        <h2>From novice to expert</h2>
+        <p class="explain">Our findings indicate that the selection of the reference radiograph significantly influences the
+          outcome, as each radiograph is unique and often presents highly superimposed structures. This can introduce ambiguity
+          regarding the precise position and the intended anatomical structure to be marked by the landmark. To enhance the
+          reliability of the matching process, multiple reference radiographs can be used to establish a more robust alignment
+          based on overall agreement. Increasing the number of reference radiographs systematically improves the framework's
+          ability to account for variations between radiographs, leading to a steady improvement in matching accuracy as
+          demonstrated by the results below.</p>
+      </div>
+      <figure class="float chart settle">
+        <div class="scroll">
+          <img src="static/images/multiple_references.svg" width="1549" height="462" loading="lazy"
+               alt="Sixteen bar charts, one per measurement, for 1, 5, 10, 20 and 40 reference radiographs, each with the inter-rater score as a red dashed line.">
+        </div>
+      </figure>
+      <p class="swipe">Swipe to see the whole figure.</p>
+    </section>
+
+    <!-- ======================= accompanying and downstream projects ======================= -->
+    <section id="projects" class="wide">
+      <div class="head center narrow reveal">
+        <p class="kicker">Accompanying &amp; downstream projects</p>
+        <h2>Built on this framework</h2>
+      </div>
+
+      <div class="rail reveal">
+        <button class="rail-nav prev" type="button" aria-label="Show previous projects" hidden>
+          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 3 5 8l5 5"/></svg>
         </button>
+        <div class="rail-track" tabindex="0" role="region" aria-label="Accompanying and downstream projects">
 
-        <div class="project-rail-track" tabindex="0" role="region" aria-label="Accompanying and downstream projects">
-
-        <!-- Project 1 -->
-        <div class="project-rail-item">
-          <div class="project-card">
-            <h3 class="project-card-title">AI challenges the reference standards for lateral knee morphometry</h3>
-            <p class="project-description">Many clinical reference values were fixed decades ago from small patient groups
-              and never tested at scale. Using automated AI landmark measurement on more than 41,000 lateral knee radiographs
-              from two independent health systems, we show that the most widely used patellar height threshold systematically
-              misclassifies knees without reported imaging finding, demonstrating how automated morphometry can re-evaluate
-              inherited diagnostic standards.</p>
-            <button class="read-more-btn">
-              <span class="read-more-label">Read more</span>
-              <i class="fas fa-chevron-down icon-rot"></i>
-            </button>
-            <div class="project-card-actions">
-              <div class="buttons">
-                <a href="#" class="button is-small is-rounded is-dark">
-                  <span class="icon is-small"><i class="fas fa-file-pdf"></i></span>
-                  <span>Paper - tba</span>
-                </a>
-                <button class="button is-small is-rounded is-light bibtex-toggle-btn">
-                  <span class="icon is-small"><i class="fas fa-code"></i></span>
-                  <span>BibTeX</span>
-                </button>
-              </div>
-              <div class="bibtex-content-box" style="display: none;">
-                <pre style="padding: 0.5rem; font-size: 0.7rem; white-space: pre-wrap; overflow-x: auto; background-color: #f5f5f5; border-radius: 4px;"><code>@article{tba,
+          <article class="pcard">
+            <span class="tag">41,000+ radiographs</span>
+            <h3>AI challenges the reference standards for lateral knee morphometry</h3>
+            <p class="desc">Many clinical reference values were fixed decades ago from small patient groups and never tested at
+              scale. Using automated AI landmark measurement on more than 41,000 lateral knee radiographs from two independent
+              health systems, we show that the most widely used patellar height threshold systematically misclassifies knees
+              without reported imaging finding, demonstrating how automated morphometry can re-evaluate inherited diagnostic
+              standards.</p>
+            <button class="more" type="button" aria-expanded="false"><span>Read more</span><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m3 6 5 5 5-5"/></svg></button>
+            <div class="actions">
+              <a class="btn small is-off" aria-disabled="true">Paper · tba</a>
+              <button class="btn small bib-toggle" type="button" aria-expanded="false">BibTeX</button>
+            </div>
+            <pre hidden><code>@article{tba,
   title={tba},
   author={tba},
   journal={tba},
   year={2026}
 }</code></pre>
-              </div>
-            </div>
-          </div>
-        </div>
+          </article>
 
-        <!-- Project 2 -->
-        <div class="project-rail-item">
-          <div class="project-card">
-            <h3 class="project-card-title">On the symmetry of the contralateral knee</h3>
-            <p class="project-description">The contralateral knee is widely used as a reference in patellofemoral radiography,
-              but how much side-to-side difference a routine radiograph can actually resolve has never been quantified. Using
-              automated AI landmark measurement on more than 11,000 paired knee radiographs from a multi-site health system,
-              we show that side-to-side differences in patellofemoral indices fall at the resolution floor of radiography itself,
-              defining index-specific tolerance intervals within which the contralateral knee is a usable reference and beyond
-              which it is not.</p>
-            <button class="read-more-btn">
-              <span class="read-more-label">Read more</span>
-              <i class="fas fa-chevron-down icon-rot"></i>
-            </button>
-            <div class="project-card-actions">
-              <div class="buttons">
-                <a href="#" class="button is-small is-rounded is-dark">
-                  <span class="icon is-small"><i class="fas fa-file-pdf"></i></span>
-                  <span>Paper - tba</span>
-                </a>
-                <button class="button is-small is-rounded is-light bibtex-toggle-btn">
-                  <span class="icon is-small"><i class="fas fa-code"></i></span>
-                  <span>BibTeX</span>
-                </button>
-              </div>
-              <div class="bibtex-content-box" style="display: none;">
-                <pre style="padding: 0.5rem; font-size: 0.7rem; white-space: pre-wrap; overflow-x: auto; background-color: #f5f5f5; border-radius: 4px;"><code>@article{tba,
+          <article class="pcard">
+            <span class="tag">11,000+ paired radiographs</span>
+            <h3>On the symmetry of the contralateral knee</h3>
+            <p class="desc">The contralateral knee is widely used as a reference in patellofemoral radiography, but how much
+              side-to-side difference a routine radiograph can actually resolve has never been quantified. Using automated AI
+              landmark measurement on more than 11,000 paired knee radiographs from a multi-site health system, we show that
+              side-to-side differences in patellofemoral indices fall at the resolution floor of radiography itself, defining
+              index-specific tolerance intervals within which the contralateral knee is a usable reference and beyond which it
+              is not.</p>
+            <button class="more" type="button" aria-expanded="false"><span>Read more</span><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m3 6 5 5 5-5"/></svg></button>
+            <div class="actions">
+              <a class="btn small is-off" aria-disabled="true">Paper · tba</a>
+              <button class="btn small bib-toggle" type="button" aria-expanded="false">BibTeX</button>
+            </div>
+            <pre hidden><code>@article{tba,
   title={tba},
   author={tba},
   journal={tba},
   year={2026}
 }</code></pre>
-              </div>
-            </div>
-          </div>
-        </div>
+          </article>
 
-        <!-- Project 3 (placeholder) -->
-        <div class="project-rail-item">
-          <div class="project-card">
-            <h3 class="project-card-title">A morphometry agent for clinical routine</h3>
-            <p class="project-status">Coming soon</p>
-            <p class="project-description">Bringing automated morphometry into everyday reporting, an LLM agent works a
-              radiograph case step by step and drafts the structured report, taking every measurement from the validated
-              morphometry service and every reference range from a guideline corpus instead of its own priors, while the
-              radiologist stays in the loop to correct landmarks, wording and thresholds.</p>
-            <button class="read-more-btn">
-              <span class="read-more-label">Read more</span>
-              <i class="fas fa-chevron-down icon-rot"></i>
-            </button>
-            <div class="project-card-actions">
-              <div class="buttons">
-                <a href="#" class="button is-small is-rounded is-dark">
-                  <span class="icon is-small"><i class="fas fa-file-pdf"></i></span>
-                  <span>Paper - tba</span>
-                </a>
-                <button class="button is-small is-rounded is-light bibtex-toggle-btn">
-                  <span class="icon is-small"><i class="fas fa-code"></i></span>
-                  <span>BibTeX</span>
-                </button>
-              </div>
-              <div class="bibtex-content-box" style="display: none;">
-                <pre style="padding: 0.5rem; font-size: 0.7rem; white-space: pre-wrap; overflow-x: auto; background-color: #f5f5f5; border-radius: 4px;"><code>@article{tba,
+          <article class="pcard">
+            <span class="tag">Paper in preparation</span>
+            <h3>A morphometry agent for clinical routine</h3>
+            <p class="desc">Bringing automated morphometry into everyday reporting, an LLM agent works a radiograph case step by
+              step and drafts the structured report, taking every measurement from the validated morphometry service and every
+              reference range from a guideline corpus instead of its own priors, while the radiologist stays in the loop to
+              correct landmarks, wording and thresholds.</p>
+            <button class="more" type="button" aria-expanded="false"><span>Read more</span><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m3 6 5 5 5-5"/></svg></button>
+            <div class="actions">
+              <a class="btn small" href="https://truhnlab.github.io/RadiographMorphometryAgent/" target="_blank" rel="noopener">Project page</a>
+              <a class="btn small" href="https://github.com/TruhnLab/RadiographMorphometryAgent" target="_blank" rel="noopener">Code</a>
+            </div>
+          </article>
+
+          <article class="pcard">
+            <span class="tag soon">Coming soon</span>
+            <h3>Assessing pediatric hip morphometry</h3>
+            <div class="actions">
+              <a class="btn small is-off" aria-disabled="true">Paper · tba</a>
+              <button class="btn small bib-toggle" type="button" aria-expanded="false">BibTeX</button>
+            </div>
+            <pre hidden><code>@article{tba,
   title={tba},
   author={tba},
   journal={tba},
   year={2026}
 }</code></pre>
-              </div>
-            </div>
-          </div>
-        </div>
+          </article>
 
-        <!-- Project 4 (placeholder) -->
-        <div class="project-rail-item">
-          <div class="project-card">
-            <h3 class="project-card-title">Assessing pediatric hip morphometry</h3>
-            <p class="project-status">Coming soon</p>
-            <div class="project-card-actions">
-              <div class="buttons">
-                <a href="#" class="button is-small is-rounded is-dark">
-                  <span class="icon is-small"><i class="fas fa-file-pdf"></i></span>
-                  <span>Paper - tba</span>
-                </a>
-                <button class="button is-small is-rounded is-light bibtex-toggle-btn">
-                  <span class="icon is-small"><i class="fas fa-code"></i></span>
-                  <span>BibTeX</span>
-                </button>
-              </div>
-              <div class="bibtex-content-box" style="display: none;">
-                <pre style="padding: 0.5rem; font-size: 0.7rem; white-space: pre-wrap; overflow-x: auto; background-color: #f5f5f5; border-radius: 4px;"><code>@article{tba,
+          <article class="pcard">
+            <span class="tag soon">Coming soon</span>
+            <h3>Automated quality control of hip radiographs</h3>
+            <div class="actions">
+              <a class="btn small is-off" aria-disabled="true">Paper · tba</a>
+              <button class="btn small bib-toggle" type="button" aria-expanded="false">BibTeX</button>
+            </div>
+            <pre hidden><code>@article{tba,
   title={tba},
   author={tba},
   journal={tba},
   year={2026}
 }</code></pre>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Project 5 (placeholder) -->
-        <div class="project-rail-item">
-          <div class="project-card">
-            <h3 class="project-card-title">Automated quality control of hip radiographs</h3>
-            <p class="project-status">Coming soon</p>
-            <div class="project-card-actions">
-              <div class="buttons">
-                <a href="#" class="button is-small is-rounded is-dark">
-                  <span class="icon is-small"><i class="fas fa-file-pdf"></i></span>
-                  <span>Paper - tba</span>
-                </a>
-                <button class="button is-small is-rounded is-light bibtex-toggle-btn">
-                  <span class="icon is-small"><i class="fas fa-code"></i></span>
-                  <span>BibTeX</span>
-                </button>
-              </div>
-              <div class="bibtex-content-box" style="display: none;">
-                <pre style="padding: 0.5rem; font-size: 0.7rem; white-space: pre-wrap; overflow-x: auto; background-color: #f5f5f5; border-radius: 4px;"><code>@article{tba,
-  title={tba},
-  author={tba},
-  journal={tba},
-  year={2026}
-}</code></pre>
-              </div>
-            </div>
-          </div>
-        </div>
+          </article>
 
         </div>
-
-        <button class="rail-nav is-next" type="button" aria-label="Show more projects" hidden>
-          <i class="fas fa-chevron-right"></i>
+        <button class="rail-nav next" type="button" aria-label="Show more projects" hidden>
+          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 3 5 5-5 5"/></svg>
         </button>
       </div>
-    </div>
-  </section>
-  <!-- End accompanying projects -->
+      <div class="rail-progress" id="railProgress" aria-hidden="true"></div>
+    </section>
 
-  <!-- Paper abstract -->
-  <section class="section hero is-light">
-    <div class="container is-max-desktop">
-      <div class="columns is-centered has-text-centered">
-        <div class="column is-four-fifths">
-          <h2 class="title is-3">Abstract</h2>
-          <div class="content has-text-justified">
-            <p>
-              This study presents a zero-shot artificial intelligence (AI)-based approach for automated landmark
-              matching in radiographs, designed to improve scalability and reliability in deriving musculoskeletal (MSK)
-              measurements across various anatomic regions and conditions.
-              Key anatomic landmarks were manually identified under expert supervision, building the basis to
-              automatically derive pertinent angle and distance measurements.
-              Using one patient's radiograph as a reference, a robust AI-based feature matching approach establishes
-              dense matches between the reference and unseen target images.
-              Reference landmarks are transferred along the dense matching, resulting in precise landmark placement and
-              automated calculation of MSK measurements within an entire patient cohort.
-              The results demonstrate versatile and robust application without requiring anatomy-specific training,
-              while remaining stable with in the presence of orthopedic implants.
-            </p>
-          </div>
-        </div>
+    <!-- ======================= citation ======================= -->
+    <section id="citation" class="wide">
+      <div class="head center narrow reveal">
+        <h2>Citation</h2>
       </div>
-    </div>
-  </section>
-  <!-- End paper abstract -->
-
-  <!-- Teaser image -->
-  <!-- <section class="hero is-small">
-  <div class="hero-body">
-    <div class="container">
-      <div class="columns is-centered">
-       <div class="item">
-          <br>
-          <img src="static/images/banner.svg"/>
-      </div>      
-    </div>
-  </div>
-</div>
-</div>
-</section> -->
-  <!-- End teaser image -->
-
-
-  <!-- Method section -->
-  <section class="hero is-small">
-    <div class="hero-body">
-      <div class="container">
-        <!-- <h2 class="title is-3">Method</h2> -->
-        <div style="position: relative;">
-          <h2 class="title is-3">From Head to Toe: A Single AI Framework for Universal Application</h2>
-          <img src="static/images/skelet.svg"
-            style="float: left; margin: 0px 0px 0px 0px; max-width: 320px; width: 50%; height: auto; border-radius: 0px;" />
-
-          <div style="text-align: justify;">
-            Artificial intelligence (AI) has shown great potential in assisting radiologists with musculoskeletal (MSK)
-            assessments across various anatomical regions<sup><a href="https://pubmed.ncbi.nlm.nih.gov/36766600/"
-                target="_blank">1</a>,<a href="https://pubmed.ncbi.nlm.nih.gov/37964028/" target="_blank">2</a>,<a
-                href="https://pubmed.ncbi.nlm.nih.gov/34773485/" target="_blank">3</a>,<a
-                href="https://pubmed.ncbi.nlm.nih.gov/37566272/" target="_blank">4</a></sup>.
-            However, most existing tools are narrowly tailored for specific anatomies or rely on segmentation-based
-            methods as a basis.
-            To address these limitations, we propose a versatile and generalist AI-based approach for landmarks
-            matching.
-            In contrast to typical generalist landmark matching approaches that depend on automatically identified,
-            optimally descriptive landmarks<sup><a href="https://arxiv.org/abs/1911.11763" target="_blank">5</a>,<a
-                href="https://arxiv.org/abs/2306.13643" target="_blank">6</a>,<a href="https://arxiv.org/abs/2104.00680"
-                target="_blank">7</a></sup>, our use-case has to be based on manually selected landmarks tailored for
-            MSK measurements.
-            As these landmarks are potentially subotimal for precise matching, we employ an AI-based method<sup><a
-                href="https://parskatt.github.io/RoMa/" target="_blank">8</a></sup> that first performs multi-scale
-            dense image matching between the reference and target images independently of the landmarks.
-            The AI uses a combination of transformer and convolutional neural networks to establish a multi-resolution
-            descriptive feature representation of each position within the images, allowing to define correspondences
-            between the reference and target images.
-            In a subsequent step, landmark positions are transferred to the target image based on these correspondences,
-            with the determination of final locations benefiting from the redundancy of the dense matching.
-            This enables robust automation of landmark matching from a reference patient across an entire cohort of
-            target patients.
-            The approach is anatomy-agnostic, enabling the use of the same backbone model for a wide range of anatomical
-            regions and MSK measurements.
-            For more detailed information we refer to our paper.
-          </div>
-
-          <div style="clear: both;"></div>
-        </div>
-      </div>
-    </div>
-  </section>
-  <!-- End method section -->
-
-
-  <!-- Video carousel -->
-  <section class="hero is-small">
-    <div class="hero-body">
-      <div class="container">
-        <h2 class="title is-3">Interactivity: Real-Time AI-Assisted Landmark Matching</h2>
-        Once a correspondence between the reference and target radiographs is established, landmark matching can be
-        performed in real-time.
-        This process enables the alignment of individual points and allows for the definition of a predefined set of
-        landmarks that can be mapped onto the target patient.
-        These predefined landmarks can be customized for the automated calculation of specific measurements, which, once
-        defined on a reference patient, can be consistently and automatically transferred to any radiograph within the
-        target cohort.<br><br>
-        <span style="color:gray; font-size:small;">Hover your mouse over the video to stop automatic transitions.</span>
-        <div id="results-carousel" class="carousel results-carousel">
-          <div class="item item-video2">
-            <video poster="" id="video2" autoplay controls muted loop height="100%" width="100%">
-              <!-- Your video file here -->
-              <source src="static/videos/feet_ap.mp4" type="video/mp4">
-            </video>
-          </div>
-          <div class="item item-video4">
-            <video poster="" id="video4" autoplay controls muted loop height="100%" width="100%">\
-              <!-- Your video file here -->
-              <source src="static/videos/feet_lateral.mp4" type="video/mp4">
-            </video>
-          </div>
-          <div class="item item-video5">
-            <video poster="" id="video5" autoplay controls muted loop height="100%" width="100%">\
-              <!-- Your video file here -->
-              <source src="static/videos/leg.mp4" type="video/mp4">
-            </video>
-          </div>
-          <div class="item item-video6">
-            <video poster="" id="video6" autoplay controls muted loop height="100%" width="100%">\
-              <!-- Your video file here -->
-              <source src="static/videos/knee.mp4" type="video/mp4">
-            </video>
-          </div>
-        </div>
-      </div>
-    </div>
-  </section>
-  <!-- End video carousel -->
-
-
-
-  <!-- Image carousel -->
-  <section class="hero is-small">
-    <div class="hero-body">
-      <div class="container">
-        <h2 class="title is-3">Behind the Curtain: Visualizing the Inner Workings</h2>
-        The process of establishing a dense match between two images relies on abstract feature representations for each
-        position in both the reference and target images.
-        To better understand which information is encoded by the AI, we examined the feature similarities between a
-        specific position within the reference image and the entire target image.
-        Our findings show that the AI captures both semantic and texture features. The matching process utilizes this
-        encoded information, along with precise positional data, to create a reliable mapping between the
-        images.<br><br>
-        <span style="color:gray; font-size:small;">Hover your mouse over the image to stop automatic transitions.</span>
-        <div id="results-carousel" class="carousel results-carousel">
-          <div class="item">
-            <img src="static/images/heatmap_feetap_1.png" />
-          </div>
-          <div class="item">
-            <img src="static/images/heatmap_patella_1.png" />
-          </div>
-          <div class="item">
-            <img src="static/images/heatmap_shoulder_1.png" />
-          </div>
-          <div class="item">
-            <img src="static/images/heatmap_feetlat_1.png" />
-          </div>
-          <div class="item">
-            <img src="static/images/heatmap_knee_2.png" />
-          </div>
-          <div class="item">
-            <img src="static/images/heatmap_shoulder_2.png" />
-          </div>
-          <div class="item">
-            <img src="static/images/heatmap_patella_2.png" />
-          </div>
-          <div class="item">
-            <img src="static/images/heatmap_feetap_2.png" />
-          </div>
-          <div class="item">
-            <img src="static/images/heatmap_feetlat_2.png" />
-          </div>
-          <div class="item">
-            <img src="static/images/heatmap_knee_3.png" />
-          </div>
-          <div class="item">
-            <img src="static/images/heatmap_patella_3.png" />
-          </div>
-          <div class="item">
-            <img src="static/images/heatmap_feetap_3.png" />
-          </div>
-          <div class="item">
-            <img src="static/images/heatmap_shoulder_3.png" />
-          </div>
-          <div class="item">
-            <img src="static/images/heatmap_feetlat_3.png" />
-          </div>
-          <div class="item">
-            <img src="static/images/heatmap_knee_1.png" />
-          </div>
-        </div>
-      </div>
-    </div>
-  </section>
-  <!-- End image carousel -->
-
-
-
-  <!-- Image carousel -->
-  <!--
-  <section class="hero is-small">
-  <div class="hero-body">
-    <div class="container">
-      <h2 class="title is-3">Beyond the Norm: Assessing Stability Under Challenging Conditions</h2>
-      The AI-based landmark matching framework demonstrates reliable performance across various anatomic regions and views. 
-      However, maintaining stability in the presence of orthopedic implants is a critical factor for clinical usability.
-      To investigate this, we conducted qualitative tests on diverse samples, including scenarios that extend beyond typical clinical use cases for deriving common distance and angle measurements.
-      The following results illustrate landmark matchings and measurements to those challenging cases.
-      These showcase the stability and robustness of the matching framework, but at the same time, these examples reveal its limitations in achieving precise landmark matching for certain challenging conditions.<br><br>
-      <span style="color:gray; font-size:small;">Hover your mouse over the image to stop automatic transitions.</span>
-      <div id="results-carousel" class="carousel results-carousel">
-      <div class="item">
-        <img src="static/images/challenge_feet_1.png" width="40%" style="object-fit:contain;"/>
-      </div>
-      <div class="item">
-        <img src="static/images/challenge_shoulder_1.png" width="40%" style="object-fit:contain;"/>
-      </div>
-      <div class="item">
-        <img src="static/images/challenge_knee_1.png" width="40%" style="object-fit:contain;"/>
-      </div>
-      <div class="item">
-        <img src="static/images/challenge_feet_2.png" width="40%" style="object-fit:contain;"/>
-      </div>
-      </div>
-    </div>
-  </div>
-  </section>
-  -->
-  <!-- End image carousel -->
-  
-
-
-  <!-- Teaser image -->
-  <section class="hero is-small">
-    <div class="hero-body">
-      <div class="container">
-        <h2 class="title is-3">From Novice to Expert: Annotation Through Imitation</h2>
-        Our findings indicate that the selection of the reference radiograph significantly influences the outcome, as
-        each radiograph is unique and often presents highly superimposed structures.
-        This can introduce ambiguity regarding the precise position and the intended anatomical structure to be marked
-        by the landmark.
-        To enhance the reliability of the matching process, multiple reference radiographs can be used to establish a
-        more robust alignment based on overall agreement.
-        Increasing the number of reference radiographs systematically improves the framework’s ability to account for
-        variations between radiographs, leading to a steady improvement in matching accuracy as demonstrated by the
-        results below.<br><br>
-        <div class="columns is-centered">
-          <div class="item">
-            <br>
-            <img src="static/images/multiple_references.svg" />
-          </div>
-        </div>
-      </div>
-    </div>
-    </div>
-  </section>
-  <!-- End teaser image -->
-
-
-  <!--BibTex citation -->
-  <section class="section" id="BibTeX">
-    <div class="container is-max-desktop content">
-      <h2 class="title">BibTeX</h2>
-      <pre><code>
-@article{eschweiler2026RadiographMatching,
+      <div class="bib float reveal">
+        <button type="button" class="copy" id="copyBib">Copy</button>
+<pre id="bib"><code>@article{eschweiler2026RadiographMatching,
   title={An Artificial Intelligence Framework for Universal Landmark Matching and Morphometry in Musculoskeletal Radiography},
   author={Dennis Eschweiler and Eneko Cornejo Merodio and Felix Barajas Ordonez and Aleksandar Lichev and Nikol Ignatova and Marc Sebastian von der St{\"u}ck and Christiane K. Kuhl and Daniel Truhn and Sven Nebelung},
   journal={European Radiology},
   pages={1--14},
   year={2026},
   doi={10.1007/s00330-026-12555-y}
-}
-    </code></pre>
-    </div>
-  </section>
-  <!--End BibTex citation -->
+}</code></pre>
+      </div>
+      <p class="note center also">The dense matching builds on <a href="https://parskatt.github.io/RoMa/" target="_blank" rel="noopener">RoMa</a>
+        by Edstedt et al. (CVPR 2024). If you use the framework, please consider citing it as well.</p>
+    </section>
+  </main>
 
-
-  <footer class="footer">
-    <div class="container">
-      <div class="columns is-centered">
-        <div class="column is-8">
-          <div class="content">
-            <p>
-              This page was built using the <a href="https://github.com/eliahuhorwitz/Academic-project-page-template"
-                target="_blank">Academic Project Page Template</a> which was adopted from the <a
-                href="https://nerfies.github.io" target="_blank">Nerfies</a> project page.<br>
-              Flaticon created by <a
-                href="https://www.flaticon.com/free-icon/x-ray_1757690?term=xray&related_id=1757690"
-                target="_blank">pmicon</a>.
-            </p>
-          </div>
-        </div>
+  <footer>
+    <div class="wide cols">
+      <div>
+        <p><a href="https://aimedicine.rwth-aachen.de/" target="_blank" rel="noopener">Lab for Artificial Intelligence in Medicine</a></p>
+        <p><a href="https://www.ukaachen.de/kliniken-institute/klinik-fuer-diagnostische-und-interventionelle-radiologie/forschung/labor-fuer-kuenstliche-intelligenz-in-der-medizin/" target="_blank" rel="noopener">Department of Diagnostic and Interventional Radiology</a>, University Hospital RWTH Aachen</p>
+      </div>
+      <div>
+        <p>This is a research project and not a medical device.</p>
+        <p>Icon by <a href="https://www.flaticon.com/free-icon/x-ray_1757690?term=xray&amp;related_id=1757690" target="_blank" rel="noopener">pmicon</a> on Flaticon.</p>
+        <p>This page sets no cookies and loads no external resources.</p>
       </div>
     </div>
   </footer>
 
-  <!-- Statcounter tracking code -->
-
-  <!-- You can add a tracker to track page visits by creating an account at statcounter.com -->
-
-  <!-- End of Statcounter Code -->
-
+  <script src="static/js/site.js?v=1" defer></script>
 </body>
-
 </html>
