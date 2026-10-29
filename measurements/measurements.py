@@ -2280,7 +2280,7 @@ kpt_names_knee_lateral = [
 def insall_salvati_ratio(landmarks):
     
     patellar_tendon_line = landmarks[2] - landmarks[3]
-    patellar_line = landmarks[0] - landmarks[2]
+    patellar_line = landmarks[23] - landmarks[2]
 
     # Calculate the measurement
     patellar_tendon_length = np.linalg.norm(patellar_tendon_line)
@@ -2294,15 +2294,15 @@ def insall_salvati_ratio(landmarks):
 
 def vis_insall_salvati_ratio(landmarks):
     
-    return [landmarks[0], landmarks[2], landmarks[3]],\
-           [[landmarks[0], landmarks[2]], [landmarks[2], landmarks[3]]],\
+    return [landmarks[23], landmarks[2], landmarks[3]],\
+           [[landmarks[23], landmarks[2]], [landmarks[2], landmarks[3]]],\
            [],\
            [POINT_COLOR, POINT_COLOR, POINT_COLOR],\
            [LINE_COLOR, LINE_COLOR],\
            []
 
 def kpts_insall_salvati_ratio():
-    return [0, 2, 3]
+    return [23, 2, 3]
 
 #---------------------------------------------------------------------
 
