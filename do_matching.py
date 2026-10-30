@@ -244,8 +244,10 @@ def main(hparams, roma_model=None):
 
                 assert id_img == id_kpt, f"ID mismatch: {id_img} != {id_kpt}"
 
-                # Skip self-matching if specified
-                if hparams.skip_selfmatching and id_img == id_target:
+                # Skip self-matching if specified: the reference is the target image itself, i.e.
+                # both image files have the same name (or, as before, the same id).
+                same_image = os.path.basename(ref_img_path) == os.path.basename(target_img_path)
+                if hparams.skip_selfmatching and (same_image or id_img == id_target):
                     print(f"Skipping self-matching for {id_target}...")
                     continue
 
