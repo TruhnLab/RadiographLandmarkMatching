@@ -2248,7 +2248,7 @@ def kpts_lateral_joint_space_width():
 #---------------------------------------------------------------------
 
 kpt_names_knee_lateral = [
-    ['1', 'Patella, base (upper border)'],
+    ['1', 'Patella, upper border of articular surface'],
     ['2', 'Patella, lower border of articular surface'],
     ['3', 'Patella, apex (lower border)'],
     ['4', 'Tibia, tibial tuverosity'],
