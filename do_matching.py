@@ -230,12 +230,17 @@ def main(hparams, roma_model=None):
 
             lat_abort = False  # set if this pass stops early due to a laterality mismatch
 
-            # References still to match in this pass, in reference order
+            # References still to match in this pass, in reference order. The cap counts
+            # the references used for this target only, so a skipped self-match does not
+            # take the place of one: with --num_references N, a target that is itself among
+            # the top N references is still matched against N others (and with N = 1
+            # against the second-ranked reference instead of none).
             pending = []
-            for num_matching, (ref_img_path, ref_kpt_path) in enumerate(zip(ref_img_files, ref_kpt_files)):
+            num_used = 0
+            for ref_img_path, ref_kpt_path in zip(ref_img_files, ref_kpt_files):
 
                 # Check if maximum number of references reached
-                if num_matching >= count_ref_used:
+                if num_used >= count_ref_used:
                     break
 
                 # Extract ID from file names
@@ -250,6 +255,9 @@ def main(hparams, roma_model=None):
                 if hparams.skip_selfmatching and (same_image or id_img == id_target):
                     print(f"Skipping self-matching for {id_target}...")
                     continue
+
+                num_matching = num_used  # position among the references used, from 0
+                num_used += 1
 
                 # Check if the image has already been processed
                 save_path_matches = os.path.join(save_path_base, f'{id_img}_to_{id_target}_matches.csv')
