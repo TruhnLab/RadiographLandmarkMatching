@@ -18,7 +18,7 @@
   <meta name="twitter:card" content="summary_large_image">
   <link rel="icon" type="image/x-icon" href="static/images/group_logo.ico">
   <link rel="preload" href="static/fonts/inter-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
-  <link rel="stylesheet" href="static/css/site.css?v=1">
+  <link rel="stylesheet" href="static/css/site.css?v=2">
   <script>document.documentElement.classList.add('js');</script>
 </head>
 <body>
@@ -317,6 +317,45 @@
           ability to account for variations between radiographs, leading to a steady improvement in matching accuracy as
           demonstrated by the results below.</p>
       </div>
+      <figure class="float consensus reveal" id="cons" aria-describedby="consNote">
+        <div class="cons-panels">
+          <div class="cons-panel" style="--ar: .944">
+            <div class="cons-img" style="aspect-ratio: 526 / 557">
+              <img src="static/images/consensus/shoulder_ap.jpg" width="831" height="880" loading="lazy" alt="A shoulder radiograph (AP view).">
+            </div>
+            <p class="cons-cap"><b>Shoulder AP</b><span><b class="err">0.91</b> mm</span></p>
+          </div>
+          <div class="cons-panel" style="--ar: .597">
+            <div class="cons-img" style="aspect-ratio: 823 / 1379">
+              <img src="static/images/consensus/knee_lateral.jpg" width="525" height="880" loading="lazy" alt="A lateral knee radiograph.">
+            </div>
+            <p class="cons-cap"><b>Knee lateral</b><span><b class="err">1.75</b> mm</span></p>
+          </div>
+          <div class="cons-panel" style="--ar: .775">
+            <div class="cons-img" style="aspect-ratio: 810 / 1045">
+              <img src="static/images/consensus/foot_ap.jpg" width="682" height="880" loading="lazy" alt="A foot radiograph (AP view).">
+            </div>
+            <p class="cons-cap"><b>Foot AP</b><span><b class="err">1.13</b> mm</span></p>
+          </div>
+        </div>
+        <div class="cons-foot">
+          <button type="button" class="auto" id="consAuto" aria-pressed="false"><svg class="i-pause" viewBox="0 0 16 16" aria-hidden="true"><path d="M4 2.5h3v11H4zM9 2.5h3v11H9z"/></svg><svg class="i-play" viewBox="0 0 16 16" aria-hidden="true"><path d="M4 2.5v11l9-5.5z"/></svg><span>Pause</span></button>
+          <label class="cons-n" for="consK">Reference radiographs <output id="consN" for="consK">40</output></label>
+          <div class="cons-range">
+            <input type="range" id="consK" min="1" max="40" step="1" value="40">
+            <div class="ticks" aria-hidden="true"><span style="--f: 0">1</span><span style="--f: .1026">5</span><span style="--f: .2308">10</span><span style="--f: .4872">20</span><span style="--f: 1">40</span></div>
+          </div>
+        </div>
+        <figcaption class="cons-legend">
+          <span><i class="sw vote"></i>Landmarks transferred from each reference</span>
+          <span><i class="sw cons"></i>Geometric median of these landmarks</span>
+          <span><i class="sw gt"></i>Expert annotation</span>
+        </figcaption>
+      </figure>
+      <p class="swipe cons-swipe">Swipe to see all three radiographs.</p>
+      <p class="note center cons-note" id="consNote">Example illustrations of how the landmark predictions settle as reference radiographs are
+        added one at a time. The red dots show the geometric median of all landmarks transferred so far. The number next to each view gives their mean distance to the expert annotation in
+        millimeters, and the curve below follows this distance as references are added.</p>
       <figure class="float chart settle">
         <div class="scroll">
           <img src="static/images/multiple_references.svg" width="1549" height="462" loading="lazy"
@@ -476,6 +515,7 @@
     </div>
   </footer>
 
-  <script src="static/js/site.js?v=1" defer></script>
+  <script src="static/js/consensus-data.js?v=1" defer></script>
+  <script src="static/js/site.js?v=2" defer></script>
 </body>
 </html>

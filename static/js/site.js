@@ -453,6 +453,146 @@
     }
   }
 
+  // ---------- from novice to expert: the consensus of more and more references ----------
+  // Three radiographs of the study with, precomputed by the study's pipeline (consensus-data.js), the landmarks
+  // transferred to each from 40 reference radiographs (votes, in the study's order) and the geometric median of the
+  // first k of them (cons). Playing adds one reference per step, slowly at first, then faster, holds at 40 and starts
+  // over: the newest votes light up and fade into the cloud while the consensus slides to its new place. The slider
+  // and the lines under the radiographs pick k directly; the slider pauses the playing, a mouse on a line only holds it.
+  const cons = $('#cons');
+  const DATA = window.CONSENSUS_DATA;
+  if (cons && DATA) {
+    const NS = 'http://www.w3.org/2000/svg';
+    const make = (tag, attrs, parent) => {
+      const e = document.createElementNS(NS, tag);
+      for (const k in attrs) e.setAttribute(k, attrs[k]);
+      if (parent) parent.append(e);
+      return e;
+    };
+    const clamp = (v) => Math.min(1, Math.max(0, v));
+    const ease = (u) => 1 - Math.pow(1 - u, 3);
+    const K = 40, BASE = 0.13, PEAK = 0.85, FLASH_S = 0.45, FADE_S = 0.5, HOLD_S = 3.6, SPARK_H = 44, SPARK_PAD = 5;
+    const dwell = (k) => (k === K ? HOLD_S : 0.16 + 0.95 * Math.exp(-(k - 1) / 4) + (k === 1 ? 0.5 : 0));
+    const yMax = Math.ceil(Math.max(...DATA.flatMap((d) => d.err)));   // one scale for the three lines
+    const range = $('#consK'), out = $('#consN'), toggle = $('#consAuto');
+
+    const panels = $$('.cons-panel', cons).map((el, i) => {
+      const d = DATA[i];
+      const u = d.h / 1000;   // the panels are shown at one height, so sizes are given per 1000 of it
+      const svg = make('svg', { viewBox: `0 0 ${d.w} ${d.h}`, 'aria-hidden': 'true' }, $('.cons-img', el));
+      const refs = d.votes.map((v) => {
+        const g = make('g', { class: 'ref', opacity: 0 }, svg);
+        for (let j = 0; j < v.length; j += 2) make('circle', { cx: v[j], cy: v[j + 1], r: (5 * u).toFixed(2) }, g);
+        return g;
+      });
+      const gt = make('g', { class: 'gt' }, svg);
+      for (let j = 0; j < d.gt.length; j += 2) make('circle', { cx: d.gt[j], cy: d.gt[j + 1], r: (11 * u).toFixed(2) }, gt);
+      const cg = make('g', { class: 'cons' }, svg);
+      const dots = d.gt.filter((_, j) => j % 2 === 0).map(() => make('circle', { r: (7 * u).toFixed(2) }, cg));
+      const spark = make('svg', { class: 'spark', 'aria-hidden': 'true' }, el);
+      const p = {
+        d, refs, dots, spark, err: $('.err', el), at: d.cons[0].slice(), from: d.cons[0].slice(), pts: null,
+        all: make('path', { class: 'all' }, spark), done: make('path', { class: 'done' }, spark), now: make('circle', { class: 'now', r: 4 }, spark),
+      };
+      const pickAt = (e) => {
+        const r = spark.getBoundingClientRect();
+        setK(1 + Math.round(clamp((e.clientX - r.left - SPARK_PAD) / (r.width - 2 * SPARK_PAD)) * (K - 1)), false);
+      };
+      spark.addEventListener('pointermove', (e) => {
+        if (e.pointerType === 'mouse') { hover = true; pickAt(e); sync(); } else if (e.buttons) pickAt(e);
+      });
+      spark.addEventListener('pointerdown', (e) => { if (e.pointerType !== 'mouse') paused = true; pickAt(e); sync(); });
+      spark.addEventListener('pointerleave', () => { hover = false; sync(); });
+      return p;
+    });
+
+    let k = 1, vt = 0, stepAt = 0, moveAt = -1, moveS = 0.3, fadeAt = -1, fadeTo = 0;
+    const flashAt = new Array(K).fill(-1e9);
+
+    function drawSpark(p) {
+      const w = p.spark.clientWidth;
+      if (!w) return;
+      p.spark.setAttribute('viewBox', `0 0 ${w} ${SPARK_H}`);
+      p.pts = p.d.err.map((e, i) => [SPARK_PAD + (i / (K - 1)) * (w - 2 * SPARK_PAD), SPARK_PAD + (1 - e / yMax) * (SPARK_H - 2 * SPARK_PAD)]);
+      p.all.setAttribute('d', 'M' + p.pts.map((q) => q.map((v) => v.toFixed(1)).join(' ')).join('L'));
+      markSpark(p);
+    }
+    function markSpark(p) {
+      if (!p.pts) return;
+      p.done.setAttribute('d', 'M' + p.pts.slice(0, k).map((q) => q.map((v) => v.toFixed(1)).join(' ')).join('L'));
+      p.now.setAttribute('cx', p.pts[k - 1][0].toFixed(1));
+      p.now.setAttribute('cy', p.pts[k - 1][1].toFixed(1));
+    }
+
+    // animate: the consensus slides and the newest votes flash, as when playing; otherwise k is shown at once
+    function setK(n, animate) {
+      if (n === k && !animate) return;
+      if (animate && n < k) { fadeAt = vt; fadeTo = k; } else fadeAt = -1;
+      if (animate && n > k) flashAt[n - 1] = vt;
+      if (!animate) flashAt.fill(-1e9);
+      moveAt = animate ? vt : -1;
+      moveS = Math.min(0.4, 0.8 * dwell(Math.max(1, n - 1)));
+      k = n;
+      stepAt = vt;
+      for (const p of panels) {
+        p.from = p.at.slice();   // the consensus moves on from wherever it is drawn now
+        p.err.textContent = p.d.err[k - 1].toFixed(2);
+        markSpark(p);
+      }
+      range.value = k;
+      range.style.setProperty('--f', (k - 1) / (K - 1));
+      out.textContent = k;
+      render();
+    }
+
+    function render() {
+      const m = moveAt < 0 ? 1 : ease(clamp((vt - moveAt) / moveS));
+      const fade = fadeAt < 0 ? 0 : 1 - clamp((vt - fadeAt) / FADE_S);
+      for (const p of panels) {
+        const to = p.d.cons[k - 1];
+        p.dots.forEach((c, j) => {
+          for (const a of [2 * j, 2 * j + 1]) p.at[a] = p.from[a] + (to[a] - p.from[a]) * m;
+          c.setAttribute('cx', p.at[2 * j].toFixed(1));
+          c.setAttribute('cy', p.at[2 * j + 1].toFixed(1));
+        });
+        p.refs.forEach((g, r) => {
+          const o = r < k ? BASE + (PEAK - BASE) * Math.exp(-Math.max(0, vt - flashAt[r]) / FLASH_S)
+            : r < fadeTo ? BASE * fade : 0;
+          const s = o.toFixed(3);
+          if (g.getAttribute('opacity') !== s) g.setAttribute('opacity', s);
+        });
+      }
+    }
+
+    let paused = reduced, hover = false, visible = false, raf = 0, last = 0;
+    const playing = () => !paused && !hover && visible && !document.hidden;
+    const frame = (now) => {
+      vt += Math.min(0.1, (now - last) / 1000);
+      last = now;
+      if (vt - stepAt >= dwell(k)) setK(k === K ? 1 : k + 1, true);
+      else render();
+      raf = playing() ? requestAnimationFrame(frame) : 0;
+    };
+    function sync() {
+      toggle.setAttribute('aria-pressed', String(paused));
+      $('span', toggle).textContent = paused ? 'Play' : 'Pause';
+      if (playing() && !raf) { last = performance.now(); raf = requestAnimationFrame(frame); }
+    }
+
+    range.addEventListener('input', () => { paused = true; setK(+range.value, false); sync(); });
+    toggle.addEventListener('click', () => { paused = !paused; sync(); });
+    new ResizeObserver(() => panels.forEach(drawSpark)).observe(cons);
+    new IntersectionObserver(([e]) => { visible = e.isIntersecting; sync(); }, { threshold: 0.35 }).observe(cons);
+    document.addEventListener('visibilitychange', sync);
+
+    // without motion: all 40 references at once; otherwise the first reference, which lights up once in view
+    k = 0;
+    setK(reduced ? K : 1, false);
+    if (!reduced) flashAt[0] = 0;
+    render();
+    sync();
+  }
+
   // ---------- accompanying and downstream projects ----------
   // A card grows out of the rail's common height while its full text or its BibTeX entry is shown.
   for (const card of $$('.pcard')) {

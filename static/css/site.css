@@ -327,6 +327,63 @@ h2.small { font-size: 22px; letter-spacing: -.01em; margin: 0 0 10px; text-align
 .chart .scroll img { width: 100%; min-width: 900px; height: auto; }
 @media (max-width: 760px) { .chart { padding: 16px 0 12px; } .chart .scroll { padding: 0 12px; } .chart + .swipe { display: block; } }
 
+/* the consensus growing with every reference: three radiographs side by side at one height, each as wide as its crop */
+.consensus { padding: 22px 22px 16px; margin-bottom: 18px; }
+.cons-panels { display: flex; gap: 14px; }
+.cons-panel { flex: var(--ar) 1 0; min-width: 0; }
+.cons-img { position: relative; overflow: hidden; border-radius: var(--radius-sm); background: #1b1d22; }
+.cons-img img, .cons-img svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+.cons-img .ref circle { fill: #ffc83d; }
+.cons-img .gt circle { fill: none; stroke: #3ddc84; stroke-width: 1.5px; vector-effect: non-scaling-stroke; }
+.cons-img .cons circle { fill: var(--mark); stroke: #fff; stroke-width: .8px; vector-effect: non-scaling-stroke; }
+.cons-cap { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; margin: 10px 2px 0; font-size: 14px; color: var(--muted); }
+.cons-cap > b { color: var(--ink); font-weight: 650; }
+.cons-cap .err { color: var(--ink); font-size: 16px; font-weight: 650; font-variant-numeric: tabular-nums; }
+.spark { width: 100%; height: 44px; margin-top: 2px; overflow: visible; cursor: ew-resize; touch-action: pan-y; }
+.spark .all { fill: none; stroke: #c9d6ff; stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
+.spark .done { fill: none; stroke: var(--accent); stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
+.spark .now { fill: var(--accent); stroke: #fff; stroke-width: 2; }
+.cons-foot { display: flex; align-items: center; gap: 16px; margin: 14px 2px 0; }
+.cons-foot .auto { font: inherit; font-size: 13px; font-weight: 600; color: var(--muted); border: 1px solid var(--line); background: #fff;
+  padding: 5px 11px; border-radius: 999px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; flex: none; }
+.cons-foot .auto:hover { color: var(--ink); }
+.cons-foot .auto .i-play, .cons-foot .auto[aria-pressed="true"] .i-pause { display: none; }
+.cons-foot .auto[aria-pressed="true"] .i-play { display: block; }
+.cons-foot .auto svg { width: 11px; height: 11px; fill: currentColor; }
+.cons-n { flex: none; font-size: 14px; color: var(--muted); }
+.cons-n output { display: inline-block; min-width: 2ch; margin-left: 4px; color: var(--ink); font-weight: 650; font-variant-numeric: tabular-nums; }
+.cons-range { position: relative; flex: 1; padding-bottom: 16px; }
+/* --f is the thumb's place from 0 to 1; the track is filled up to the thumb's centre */
+.cons-range input { --f: 1; display: block; width: 100%; height: 16px; margin: 0; background: none; cursor: pointer; -webkit-appearance: none; appearance: none; }
+.cons-range input::-webkit-slider-runnable-track { height: 4px; border-radius: 999px;
+  background: linear-gradient(90deg, var(--accent) calc(8px + (100% - 16px) * var(--f)), #dfe4ee 0); }
+.cons-range input::-moz-range-track { height: 4px; border-radius: 999px;
+  background: linear-gradient(90deg, var(--accent) calc(8px + (100% - 16px) * var(--f)), #dfe4ee 0); }
+.cons-range input::-webkit-slider-thumb { -webkit-appearance: none; box-sizing: border-box; width: 16px; height: 16px; margin-top: -6px;
+  border-radius: 50%; background: #fff; border: 2px solid var(--accent); box-shadow: 0 2px 6px -2px rgba(14, 22, 38, .35); }
+.cons-range input::-moz-range-thumb { box-sizing: border-box; width: 16px; height: 16px; border-radius: 50%; background: #fff;
+  border: 2px solid var(--accent); box-shadow: 0 2px 6px -2px rgba(14, 22, 38, .35); }
+/* tick labels under the thumb's centre at k = 1, 5, 10, 20, 40, the reference counts of the chart below */
+.cons-range .ticks span { position: absolute; bottom: 0; left: calc(8px + (100% - 16px) * var(--f)); transform: translateX(-50%);
+  font-size: 11.5px; line-height: 1; color: var(--muted); font-variant-numeric: tabular-nums; }
+.cons-legend { display: flex; justify-content: center; flex-wrap: wrap; gap: 6px 22px; margin-top: 12px; padding-top: 12px;
+  border-top: 1px solid var(--line); font-size: 13.5px; color: var(--muted); }
+.cons-legend span { display: inline-flex; align-items: center; gap: 8px; }
+.sw { width: 10px; height: 10px; border-radius: 50%; flex: none; }
+.sw.vote { background: #ffc83d; opacity: .55; }
+.sw.cons { background: var(--mark); }
+.sw.gt { border: 2px solid #3ddc84; }
+.cons-note { max-width: 760px; margin: 0 auto 34px; text-wrap: pretty; }
+@media (max-width: 760px) {
+  .consensus { padding: 14px 0 12px; }
+  .cons-panels { overflow-x: auto; scroll-snap-type: x mandatory; padding: 0 14px; scrollbar-width: none; }
+  .cons-panel { flex: 0 0 calc(var(--ar) * 320px); scroll-snap-align: center; }   /* low enough for the next one to peek in */
+  .cons-foot { flex-wrap: wrap; gap: 10px 14px; margin: 14px 14px 0; }
+  .cons-range { flex-basis: 100%; }
+  .cons-legend { margin-left: 14px; margin-right: 14px; }
+  .cons-swipe { display: block; margin: -6px 0 12px; }
+}
+
 /* ---------- accompanying and downstream projects: a horizontal rail ---------- */
 /* The list keeps growing, so the tiles live in one band of constant height that can be dragged with the mouse,
    scrolled with a trackpad or wheel, swiped on touch, or stepped through with the two chevron buttons. */
